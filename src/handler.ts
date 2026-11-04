@@ -73,7 +73,7 @@ function prepare(deps: Deps): { fallback: Response } | { config: CardConfig; key
   const gql = deps.gql ?? createGraphQL(token);
   /** Fetches from GitHub and stores a successful result; a failure leaves stored data untouched. */
   const refresh = async () => {
-    const result = await fetchActivity(gql, config.username, deps.now());
+    const result = await fetchActivity(gql, config.username, deps.now(), { private: config.private });
     if (result.kind !== "user" || result.activity.repos.length === 0) return { result };
     const stored: Stored = { version: 1, key, activity: result.activity, storedAt: deps.now().toISOString(), complete: true };
     await deps.store.set(key, stored);
@@ -85,6 +85,7 @@ function prepare(deps: Deps): { fallback: Response } | { config: CardConfig; key
 function subjectResponse(result: SubjectResult, stored: Stored | undefined, config: CardConfig, options: RenderOptions): Response {
   if (result.kind === "missing") return fallback("Unknown GitHub user", `No GitHub user is called ${config.username}`);
   if (result.kind === "organization") return fallback("Organizations are not supported", `${result.login} is an organization`);
+  if (result.kind === "private-mismatch") return fallback("Private Activity needs the Subject's own token", `The token belongs to ${result.tokenOwner}, not ${config.username}`);
   if (!stored) return fallback("No Activity yet", `${result.activity.login} has no public commits`);
   return card(stored, config, options);
 }

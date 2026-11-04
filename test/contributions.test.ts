@@ -7,8 +7,10 @@ import { replay, type Recording } from "./replay.js";
 const rec = fixture as Recording;
 const repo = (name: string, isPrivate: boolean, days: [string, number][], languages: [string, number][] = [["Go", 100]]) => ({
   repository: {
+    id: `R_${name}`,
     nameWithOwner: name,
     isPrivate,
+    owner: { login: name.split("/")[0]! },
     languages: { totalSize: languages.reduce((a, [, s]) => a + s, 0), edges: languages.map(([n, size]) => ({ size, node: { name: n, color: "#00ADD8" } })) },
   },
   contributions: { totalCount: days.length, nodes: days.map(([occurredAt, commitCount]) => ({ occurredAt, commitCount })) },
@@ -47,7 +49,7 @@ describe("aggregate", () => {
   });
 
   it("never keeps a private repository's name", () => {
-    const [r] = aggregate([page(repo("me/secret-plan", true, [["2024-01-01T00:00:00Z", 1]]))]);
+    const [r] = aggregate([page(repo("me/secret-plan", true, [["2024-01-01T00:00:00Z", 1]]))], { level: "owned", login: "me" });
     expect(r!.name).toBeNull();
     expect(JSON.stringify(r)).not.toContain("secret");
   });
