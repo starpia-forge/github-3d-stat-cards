@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0004
+---
+
 # Language River is the v1 Card concept
 
 The v1 Card depicts a Subject's Language History as a River flowing across a long Diorama, from their first Activity on the left to today on the right. The River's width is monthly Activity and each Language is a Stream sized by its share. New Languages join as Tributaries, abandoned ones leave as Distributaries, quiet stretches become Shallows, and the right end is a Cut Face showing the latest composition. We chose it because the Card must fill the full width of a GitHub profile README (846px at most). The river is the one metaphor we considered where time runs in reading direction and taking up or putting down a Language has a natural visual. Its animation, water flowing along the Streams, carries meaning and is also the cheapest and most reliable kind of animation an SVG loaded as an image can do.

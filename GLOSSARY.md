@@ -46,6 +46,10 @@ _Avoid_: technology, stack, skill
 The share of each Language in a repository's code as it stands today.
 _Avoid_: language breakdown, composition
 
+**Primary Language** (주 언어):
+The Language with the largest share of a repository's Language Mix.
+_Avoid_: main language, top language
+
 **Attribution** (배분):
 Splitting a repository's Activity across Languages in proportion to its Language Mix.
 _Avoid_: classification, detection
@@ -61,39 +65,45 @@ An embeddable image showing one visualization of one Subject.
 _Avoid_: badge, widget, banner
 
 **Fallback Card** (대체 카드):
-A Card shown in place of a Language History when none can be produced, for example for a misconfigured Subject, an organization, a Subject with no Activity, or an exhausted rate limit.
+A Card shown in place of the Milky Way when none can be produced, for example for a misconfigured Subject, an organization, a Subject with no Activity, or an exhausted rate limit.
 _Avoid_: error image, placeholder
 
-### The River
+### The Milky Way
 
-**River** (강):
-The Card that depicts a Subject's Language History as a river flowing from their first Activity (left) to today (right).
-_Avoid_: chart, graph, streamgraph
+**Milky Way** (은하수):
+The Card that depicts a Subject's repositories as Bodies scattered along a Band of light running from their first Activity (left) to today (right).
+_Avoid_: galaxy, starfield, chart
 
-**Stream** (물줄기):
-The part of the River that carries one Language; its width at any point is that Language's Activity at that time.
-_Avoid_: current (reads as "present"), band, layer, channel
+**Band** (띠):
+The Milky Way's stream of light; position along it is time and its brightness is monthly Activity.
+_Avoid_: axis, timeline, river
 
-**Other Stream** (기타 물줄기):
-The single Stream that carries every Language outside the Subject's top six.
+**Rift** (암흑대):
+A darkened, shortened stretch of the Band where the Subject had no Activity for more than three months.
+_Avoid_: gap, shallows, hiatus
+
+**Body** (천체):
+The celestial object that stands for one repository the Subject has Activity in, placed on the Band at the commit-weighted middle of that Activity.
+_Avoid_: star (that is only one Tier), object, node, dot
+
+**Tier** (단계):
+The kind of Body a repository becomes, set by the Subject's commit count there: Starlight, Star, Planet or Nebula.
+_Avoid_: level, rank, size
+
+**Starlight** (별빛):
+The smallest Tier: a twinkling point, for 1–9 commits, coloured by its repository's Primary Language.
+
+**Star** (항성):
+A glowing star with light spikes, for 10–49 commits, coloured by its repository's Primary Language.
+_Avoid_: sun
+
+**Planet** (행성):
+A lit sphere banded by its repository's Language Mix, for 50–199 commits.
+
+**Nebula** (성운):
+A gas cloud coloured by its repository's Language Mix and stretched along the Band over its active span, for 200 or more commits.
+_Avoid_: cloud, galaxy
+
+**Other** (기타):
+The neutral colour group that stands for every Language outside the Subject's top six.
 _Avoid_: misc, rest, tail
-
-**Tributary** (지류):
-The point where a Stream first joins the River: the Subject taking up a Language.
-_Avoid_: branch, fork (both mean something else on GitHub)
-
-**Distributary** (갈래):
-The point where a Stream leaves the River: the Subject putting a Language down.
-_Avoid_: branch, fork
-
-**Shallows** (여울):
-A stretch of the River where the Subject had little or no Activity.
-_Avoid_: gap, drought, hiatus
-
-**Cut Face** (단면):
-The River's right-hand end, cut at today, showing the Subject's Language composition over the last twelve months.
-_Avoid_: legend, summary
-
-**Diorama** (디오라마):
-The long block of land the River runs across.
-_Avoid_: terrain, map, background
