@@ -1,5 +1,6 @@
 import type { Languages } from "../languages.js";
-import type { Timeline } from "../timeline.js";
+import { TIER_ORDER, TIERS } from "../tiers.js";
+import type { BandTime } from "../band-time.js";
 import { yearBoundaries } from "./band.js";
 import { INK } from "./color.js";
 import { th, type Ink } from "./ink.js";
@@ -45,12 +46,11 @@ export function drawTierLegend(ink: Ink, tw: TextWriter): string {
   const col = th(INK, "#e6edf3");
   const out: string[] = [];
   let cx = 22;
-  const icons = [
-    { tier: "starlight", label: "1–9" },
-    { tier: "star", label: "10–49" },
-    { tier: "planet", label: "50–199" },
-    { tier: "nebula", label: "200+ commits per project" },
-  ];
+  // "1–9 · 10–49 · 50–199 · 200+ commits per project", from the Tier thresholds
+  const icons = TIER_ORDER.map((tier, i) => {
+    const next = TIER_ORDER[i + 1];
+    return { tier, label: next ? `${TIERS[tier].min}–${TIERS[next].min - 1}` : `${TIERS[tier].min}+ commits per project` };
+  });
   for (const ic of icons) {
     if (ic.tier === "starlight") out.push(ink.el("circle", { cx: n(cx), cy: n(cy), r: 1.6, fill: col }));
     if (ic.tier === "star")
@@ -76,7 +76,7 @@ export function drawTierLegend(ink: Ink, tw: TextWriter): string {
 }
 
 /** Year ticks under the Band (skipping any that would collide), "today →", and Rift labels. */
-export function drawBandLabels(tw: TextWriter, t: Timeline, glow: Glow): string {
+export function drawBandLabels(tw: TextWriter, t: BandTime, glow: Glow): string {
   const out: string[] = [];
   const style = { face: "sans" as const, size: 10, fill: SUB, opacity: 0.9 };
   const ticks: { index: number; label: string; anchor: "start" | "middle" }[] = [{ index: t.start, label: monthLabel(t.start), anchor: "start" }];

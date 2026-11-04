@@ -1,6 +1,6 @@
 import { middlePeriod, periodIndex, type RepoActivity } from "../activity.js";
 import { tierOf, type Tier } from "../tiers.js";
-import type { Timeline } from "../timeline.js";
+import type { BandTime } from "../band-time.js";
 import { gauss, hash, seedOf } from "./hash.js";
 import { planetShape } from "./planet.js";
 import { bandY, BX0, BX1, depthAt, flatX, project } from "./scene.js";
@@ -50,7 +50,7 @@ function radiusOf(tier: Tier, commits: number): number {
 export const isSolid = (b: Placed): boolean => b.tier === "planet" || b.tier === "star";
 
 /** Places every Body. Deterministic: the same input always gives the same layout. */
-export function placeBodies(repos: RepoActivity[], t: Timeline): Placed[] {
+export function placeBodies(repos: RepoActivity[], t: BandTime): Placed[] {
   const bodies: Placed[] = repos.map((repo) => {
     const tier = tierOf(repo.total);
     const seed = seedOf(repo.key);
@@ -66,7 +66,7 @@ export function placeBodies(repos: RepoActivity[], t: Timeline): Placed[] {
 }
 
 /** Nebula width follows the active span (with a minimum); height grows slowly with commits. */
-export function nebulaSize(repo: RepoActivity, t: Timeline): { w: number; h: number; from: number; to: number } {
+export function nebulaSize(repo: RepoActivity, t: BandTime): { w: number; h: number; from: number; to: number } {
   const ps = Object.keys(repo.months).map(periodIndex);
   const from = flatX(t, Math.min(...ps));
   const to = flatX(t, Math.max(...ps) + 1);
@@ -81,7 +81,7 @@ const SLOTS = [0, -54, 54, -27, 27, -81, 81];
  * below, then shifted along the Band, then smaller) where its cloud does not collide with any
  * Nebula already placed.
  */
-function placeNebulae(nebulae: Placed[], t: Timeline): void {
+function placeNebulae(nebulae: Placed[], t: BandTime): void {
   const done: Placed[] = [];
   const sorted = [...nebulae].sort((a, b) => b.repo.total - a.repo.total || a.repo.key.localeCompare(b.repo.key));
   for (const b of sorted) {
@@ -184,7 +184,7 @@ export function overlaps(bodies: Placed[]): [Placed, Placed][] {
     for (let c = a + 1; c < solid.length; c++) {
       const p = solid[a]!;
       const q = solid[c]!;
-      if (Math.abs(p.x - q.x) < p.halfW + q.halfW && Math.abs(p.y - q.y) < p.halfH + q.halfH) out.push([p, q]);
+      if (collides(p, q)) out.push([p, q]);
     }
   return out;
 }

@@ -14,3 +14,6 @@ export function tierOf(commits: number): Tier {
   if (commits >= TIERS.star.min) return "star";
   return "starlight";
 }
+
+/** Tiers from the smallest to the largest. */
+export const TIER_ORDER: readonly Tier[] = ["starlight", "star", "planet", "nebula"];

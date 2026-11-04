@@ -18,7 +18,25 @@ export interface Deps {
   /** Resolves after `ms`; replaceable so tests control the first-render budget. */
   delay?: (ms: number) => Promise<void>;
   log?: (message: string) => void;
+  /** Refreshes in flight and recent failures; shared by the requests one instance serves. */
+  refreshes?: RefreshState;
 }
+
+/** Keeps one instance from refreshing the same data twice at once, or retrying a failure on every request. */
+export interface RefreshState {
+  inFlight: Map<string, Promise<RefreshOutcome>>;
+  failedAt: Map<string, number>;
+}
+
+export interface RefreshOutcome {
+  result: SubjectResult;
+  /** What is now stored; absent when GitHub's answer is not a Subject. */
+  stored?: Stored;
+}
+
+const instanceRefreshes: RefreshState = { inFlight: new Map(), failedAt: new Map() };
+/** After a failed background refresh, stored data is served without retrying for this long. */
+export const RETRY_AFTER_MS = 15 * 60_000;
 
 /** Six hours in the CDN and in GitHub's image proxy. */
 export const CARD_CACHE = "public, max-age=21600, s-maxage=21600";
@@ -35,7 +53,8 @@ export async function handleMilkyWay(request: Request, deps: Deps): Promise<Resp
 
   const stored = await readStored(deps.store, key);
   if (stored) {
-    if (isStale(stored, deps.now())) deps.waitUntil(refresh().catch((e) => deps.log?.(`background refresh failed: ${e}`)));
+    if (isStale(stored, deps.now()) && !ready.recentlyFailed()) deps.waitUntil(refresh().catch((e) => deps.log?.(`background refresh failed: ${e}`)));
+    if (!stored.activity.repos.length) return fallback({ kind: "no-activity", login: stored.activity.login });
     return card(stored, config, options);
   }
 
@@ -49,27 +68,28 @@ export async function handleMilkyWay(request: Request, deps: Deps): Promise<Resp
   }
   if ("failed" in raced) return fallback(githubReason(raced.failed));
   const { result, stored: fresh } = raced.done;
-  if (result.kind === "missing") return fallback({ kind: "unknown-user", login: config.username });
+  if (result.kind === "missing") return fallback({ kind: "unknown-subject", login: config.username });
   if (result.kind === "organization") return fallback({ kind: "organization", login: result.login });
   if (result.kind === "private-mismatch") return fallback({ kind: "private-mismatch", login: config.username, tokenOwner: result.tokenOwner });
-  if (!fresh) return fallback({ kind: "no-activity", login: result.activity.login });
+  if (!fresh?.activity.repos.length) return fallback({ kind: "no-activity", login: result.activity.login });
   return card(fresh, config, options);
 }
 
-/** The daily refresh (Vercel Cron). */
+/** The daily refresh (Vercel Cron). Closed unless CRON_SECRET is set, so nobody else can spend the Host's GitHub quota. */
 export async function handleRefresh(request: Request, deps: Deps & { cronSecret?: string }): Promise<Response> {
-  if (deps.cronSecret && request.headers.get("authorization") !== `Bearer ${deps.cronSecret}`) return new Response("unauthorized", { status: 401 });
+  if (!deps.cronSecret) return new Response("set CRON_SECRET to enable the daily refresh", { status: 503 });
+  if (request.headers.get("authorization") !== `Bearer ${deps.cronSecret}`) return new Response("unauthorized", { status: 401 });
   const ready = prepare(deps);
   if ("reason" in ready) return new Response("not configured", { status: 500 });
   try {
     const { result } = await ready.refresh();
-    return Response.json({ refreshed: result.kind === "user", kind: result.kind });
+    return Response.json({ refreshed: result.kind === "subject", kind: result.kind });
   } catch (e) {
     return Response.json({ refreshed: false, error: String(e) }, { status: 502 });
   }
 }
 
-function prepare(deps: Deps): { reason: FallbackReason } | { config: CardConfig; key: string; refresh: () => Promise<{ result: SubjectResult; stored?: Stored }> } {
+function prepare(deps: Deps): { reason: FallbackReason } | { config: CardConfig; key: string; refresh: () => Promise<RefreshOutcome>; recentlyFailed: () => boolean } {
   const parsed = parseConfig(deps.config);
   if (!parsed.ok) return { reason: { kind: "misconfigured", detail: `card.config.json: ${parsed.reason}` } };
   const { config } = parsed;
@@ -77,29 +97,50 @@ function prepare(deps: Deps): { reason: FallbackReason } | { config: CardConfig;
   const token = deps.token ?? "";
   const key = storageKey(config, token);
   const gql = deps.gql ?? createGraphQL(token);
-  /** Fetches from GitHub and stores a successful result; a failure leaves stored data untouched. */
-  const refresh = async () => {
+  const state = deps.refreshes ?? instanceRefreshes;
+  /** Fetches from GitHub and stores the answer; a failure leaves stored data untouched. */
+  const fetchAndStore = async (): Promise<RefreshOutcome> => {
     const result = await fetchActivity(gql, config.username, deps.now(), { private: config.private, log: deps.log });
-    if (result.kind !== "user" || result.activity.repos.length === 0) return { result };
-    const complete = result.activity.complete !== false;
-    const stored: Stored = { version: 1, key, activity: result.activity, storedAt: deps.now().toISOString(), complete };
-    if (!complete) {
+    if (result.kind !== "subject") return { result };
+    const storedAt = deps.now().toISOString();
+    let stored: Stored = { version: 1, key, activity: result.activity, storedAt };
+    if (result.activity.complete === false) {
       // An incomplete refresh never replaces complete stored data; only the refresh time moves on.
       const previous = await readStored(deps.store, key);
-      if (previous?.complete) {
-        const kept = { ...previous, storedAt: stored.storedAt };
-        await deps.store.set(key, kept);
-        return { result, stored: kept };
-      }
+      if (previous && previous.activity.complete !== false) stored = { ...previous, storedAt };
     }
-    await deps.store.set(key, stored);
+    // A failed write must not throw away what GitHub just answered: this request still gets its Card.
+    await deps.store.set(key, stored).catch((e) => deps.log?.(`storing the Activity failed: ${e}`));
     return { result, stored };
   };
-  return { config, key, refresh };
+  /** One refresh per key at a time; a failure is remembered so stale data is not retried on every request. */
+  const refresh = () => {
+    let running = state.inFlight.get(key);
+    if (!running) {
+      running = fetchAndStore()
+        .then(
+          (outcome) => {
+            state.failedAt.delete(key);
+            return outcome;
+          },
+          (e: unknown) => {
+            state.failedAt.set(key, deps.now().getTime());
+            throw e;
+          },
+        )
+        .finally(() => state.inFlight.delete(key));
+      state.inFlight.set(key, running);
+    }
+    return running;
+  };
+  const recentlyFailed = () => deps.now().getTime() - (state.failedAt.get(key) ?? -Infinity) < RETRY_AFTER_MS;
+  return { config, key, refresh, recentlyFailed };
 }
 
 function githubReason(e: unknown): FallbackReason {
-  return e instanceof GitHubError && e.kind === "rate-limited" ? { kind: "rate-limited" } : { kind: "unreachable" };
+  if (e instanceof GitHubError && e.kind === "rate-limited") return { kind: "rate-limited" };
+  if (e instanceof GitHubError && e.kind === "unauthorized") return { kind: "misconfigured", detail: "GitHub rejected GITHUB_TOKEN; it may have expired" };
+  return { kind: "unreachable" };
 }
 
 const card = (stored: Stored, config: CardConfig, options: RenderOptions) => svg(renderCard(stored.activity, config, options), CARD_CACHE);

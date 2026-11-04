@@ -28,6 +28,9 @@ export function glowTiming(seed: number): { inner: string; outer: string; durati
   };
 }
 
+/** The light-mode halo colour: the Language's pastel, or a pale ink wash for an uncoloured repository. */
+const lightWash = (langs: Languages, key: string | null): string => (key === null ? mix(INK, "#ffffff", 0.75) : colorOf(langs, key, "light"));
+
 /** Starlight (1–9 commits): a point with a soft halo in its Primary Language colour. */
 export function drawStarlight(b: Placed, ctx: DrawContext): string {
   const { ink, langs } = ctx;
@@ -35,7 +38,13 @@ export function drawStarlight(b: Placed, ctx: DrawContext): string {
   const t = glowTiming(b.seed);
   const cx = n(b.x);
   const cy = n(b.y);
-  const light = ink.only("light", `<circle class="gw" style="${t.outer}" cx="${cx}" cy="${cy}" r="3.4" fill="${colorOf(langs, key, "light")}"/><circle cx="${cx}" cy="${cy}" r="1.15" fill="${INK}"/>`);
+  // light: two pastel washes breathe out of phase around an ink dot
+  const wash = lightWash(langs, key);
+  const light = ink.only(
+    "light",
+    `<circle class="gw" style="${t.outer}" cx="${cx}" cy="${cy}" r="${n(4.6 * b.k)}" fill="${wash}" fill-opacity=".55"/>` +
+      `<circle class="gi" style="${t.inner}" cx="${cx}" cy="${cy}" r="${n(2.6 * b.k)}" fill="${wash}"/><circle cx="${cx}" cy="${cy}" r="1.15" fill="${INK}"/>`,
+  );
   let dark = "";
   if (ink.draws("dark")) {
     const c = colorOf(langs, key, "dark");
@@ -58,12 +67,13 @@ export function drawStar(b: Placed, ctx: DrawContext): string {
   const { x, y, k } = b;
   let light = "";
   if (ink.draws("light")) {
-    const c = colorOf(langs, key, "light");
+    const c = lightWash(langs, key);
     const L = 7 * k;
     light = ink.only(
       "light",
-      `<circle class="gw" style="${t.outer}" cx="${n(x)}" cy="${n(y)}" r="${n(6.5 * k)}" fill="${c}"/>` +
-        `<path d="M${n(x - L)} ${n(y)}H${n(x + L)}M${n(x)} ${n(y - L)}V${n(y + L)}" stroke="${INK}" stroke-width=".7"/>` +
+      `<circle class="gw" style="${t.outer}" cx="${n(x)}" cy="${n(y)}" r="${n(9 * k)}" fill="${c}" fill-opacity=".5"/>` +
+        `<circle class="gi" style="${t.inner}" cx="${n(x)}" cy="${n(y)}" r="${n(5.5 * k)}" fill="${c}"/>` +
+        `<path class="gs" style="${t.inner}" d="M${n(x - L)} ${n(y)}H${n(x + L)}M${n(x)} ${n(y - L)}V${n(y + L)}" stroke="${INK}" stroke-width=".7"/>` +
         `<circle cx="${n(x)}" cy="${n(y)}" r="${n(2.7 * k)}" fill="${c}" stroke="${INK}" stroke-width=".7"/>`,
     );
   }

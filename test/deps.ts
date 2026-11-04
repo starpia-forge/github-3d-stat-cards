@@ -15,6 +15,7 @@ export function fixtureDeps(overrides: Partial<Deps> = {}): Deps & { store: Memo
     gql: replay(rec),
     store: new MemoryStore(),
     waitUntil: (p) => void background.push(p),
+    refreshes: { inFlight: new Map(), failedAt: new Map() },
     background,
     ...overrides,
   } as Deps & { store: MemoryStore; background: Promise<unknown>[] };

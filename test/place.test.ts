@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { middlePeriod, type RepoActivity } from "../src/activity.js";
 import { overlaps, placeBodies, Y_MAX, Y_MIN } from "../src/render/place.js";
 import { bandY, flatX } from "../src/render/scene.js";
-import { buildTimeline } from "../src/timeline.js";
+import { buildBandTime } from "../src/band-time.js";
 
 const now = new Date("2025-06-15T00:00:00Z");
 const repo = (i: number, months: Record<string, number>): RepoActivity => ({
@@ -19,7 +19,7 @@ const crowd = [
   ...Array.from({ length: 30 }, (_, i) => repo(100 + i, { [`2024-${String((i % 12) + 1).padStart(2, "0")}`]: 1 + (i % 8) })),
   ...Array.from({ length: 4 }, (_, i) => repo(200 + i, { "2024-08": 60 + i * 20 })),
 ];
-const t = buildTimeline(crowd, now);
+const t = buildBandTime(crowd, now);
 
 describe("placeBodies", () => {
   it("is deterministic", () => {
@@ -41,7 +41,7 @@ describe("placeBodies", () => {
 
   it("puts x at the commit-weighted middle month", () => {
     const lone = repo(9, { "2024-01": 1, "2024-03": 3 });
-    const tl = buildTimeline([lone], now);
+    const tl = buildBandTime([lone], now);
     const [b] = placeBodies([lone], tl);
     expect(b!.fx).toBeCloseTo(flatX(tl, middlePeriod(lone)), 6);
   });
@@ -49,7 +49,7 @@ describe("placeBodies", () => {
   it("keeps larger Tiers nearer the centre of the Band", () => {
     const month = (i: number) => `${2020 + Math.floor(i / 12) % 5}-${String((i % 12) + 1).padStart(2, "0")}`;
     const many = Array.from({ length: 300 }, (_, i) => repo(1000 + i, { [month(i)]: i % 30 ? 3 : 60 }));
-    const placed = placeBodies(many, buildTimeline(many, now));
+    const placed = placeBodies(many, buildBandTime(many, now));
     const spread = (tier: string) => {
       const offs = placed.filter((b) => b.tier === tier).map((b) => Math.abs(b.fy - bandY(b.fx)));
       return offs.reduce((a, b) => a + b, 0) / offs.length;

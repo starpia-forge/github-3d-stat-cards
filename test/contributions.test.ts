@@ -62,7 +62,7 @@ describe("aggregate", () => {
 describe("fetchActivity on the recorded public fixture", () => {
   it("matches every recorded day exactly once", async () => {
     const result = await fetchActivity(replay(rec), rec.login, new Date(rec.recordedAt));
-    if (result.kind !== "user") throw new Error(result.kind);
+    if (result.kind !== "subject") throw new Error(result.kind);
     // a year that was filled in with monthly windows counts those, not the cut-short yearly window
     const windows = rec.calls.filter((c) => c.data.user);
     const isYear = (c: (typeof windows)[number]) => String(c.variables.from).endsWith("-01-01T00:00:00.000Z") && String(c.variables.to).slice(0, 4) === String(c.variables.from).slice(0, 4) && !String(c.variables.to).startsWith(String(c.variables.from).slice(0, 7));

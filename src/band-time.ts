@@ -24,7 +24,7 @@ export interface MonthActivity {
   rate: number;
 }
 
-export interface Timeline {
+export interface BandTime {
   /** Period index of the first Activity. */
   start: number;
   /** Fractional period index of today. */
@@ -36,7 +36,7 @@ export interface Timeline {
 }
 
 /** The Band's time axis: 70% calendar time, 30% cumulative Activity, with Rifts shortened. */
-export function buildTimeline(repos: RepoActivity[], now: Date): Timeline {
+export function buildBandTime(repos: RepoActivity[], now: Date): BandTime {
   const totals = new Map<number, number>();
   for (const r of repos) for (const [p, c] of Object.entries(r.months)) totals.set(periodIndex(p), (totals.get(periodIndex(p)) ?? 0) + c);
   const current = periodIndex(periodOf(now));

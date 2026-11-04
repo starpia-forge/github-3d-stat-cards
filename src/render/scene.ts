@@ -1,4 +1,4 @@
-import type { Timeline } from "../timeline.js";
+import type { BandTime } from "../band-time.js";
 
 /**
  * The Galactic Disk camera and the Band's shape.
@@ -41,7 +41,7 @@ export function project(x: number, y: number): Point {
 }
 
 /** Flat x of a fractional period index. */
-export const flatX = (t: Timeline, index: number): number => BX0 + t.pos(index) * (BX1 - BX0);
+export const flatX = (t: BandTime, index: number): number => BX0 + t.pos(index) * (BX1 - BX0);
 
 export interface Glow {
   /** Brightness 0–1 at flat x, following monthly Activity capped at the 95th-percentile month. */
@@ -52,7 +52,7 @@ export interface Glow {
 
 export const CAP_PERCENTILE = 0.95;
 
-export function bandGlow(t: Timeline): Glow {
+export function bandGlow(t: BandTime): Glow {
   const current = t.months.length - 1;
   const rates = t.months.filter((m) => m.commits > 0).map((m) => m.rate).sort((a, b) => a - b);
   const cap = rates.length ? rates[Math.min(rates.length - 1, Math.ceil(CAP_PERCENTILE * rates.length) - 1)]! : 1;

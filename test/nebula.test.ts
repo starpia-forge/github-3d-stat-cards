@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderCard } from "../src/render/card.js";
 import { nebulaCollisions, nebulaSize, placeBodies } from "../src/render/place.js";
 import { bandY } from "../src/render/scene.js";
-import { buildTimeline } from "../src/timeline.js";
+import { buildBandTime } from "../src/band-time.js";
 import { synthetic } from "./synthetic.js";
 
 const now = "2026-11-05T00:00:00Z";
@@ -15,7 +15,7 @@ describe("Nebulae", () => {
       now,
       repos: Array.from({ length: 8 }, (_, i) => ({ total: 900 - i * 80, from: "2026-03", months: 4 })),
     });
-    const t = buildTimeline(a.repos, new Date(now));
+    const t = buildBandTime(a.repos, new Date(now));
     const nebs = placeBodies(a.repos, t).filter((b) => b.tier === "nebula");
     expect(nebs).toHaveLength(8);
     expect(nebulaCollisions(nebs)).toEqual([]);
@@ -26,7 +26,7 @@ describe("Nebulae", () => {
 
   it("stretch with the active span, with a minimum width", () => {
     const a = synthetic({ seed: 1, now, repos: [{ total: 3000, from: "2024-01", months: 30 }, { total: 200, from: "2025-03", months: 1 }] });
-    const t = buildTimeline(a.repos, new Date(now));
+    const t = buildBandTime(a.repos, new Date(now));
     const [long, short] = a.repos.map((r) => nebulaSize(r, t));
     expect(long!.w).toBeGreaterThan(short!.w);
     expect(short!.w).toBe(58);

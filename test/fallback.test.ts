@@ -17,7 +17,7 @@ const hanging: GraphQL = () => new Promise(() => {});
 const CASES: [string, Partial<Deps>, string][] = [
   ["misconfigured", { config: { private: "off" } }, "This Card is not configured yet"],
   ["no-token", { token: undefined, gql: undefined }, "GITHUB_TOKEN is not set"],
-  ["unknown-user", { config: { username: "mona" }, gql: owner(null) }, "No such GitHub user"],
+  ["unknown-subject", { config: { username: "mona" }, gql: owner(null) }, "No such GitHub user"],
   ["organization", { config: { username: "mona" }, gql: owner("Organization") }, "Organizations have no Milky Way"],
   ["no-activity", { config: { username: "mona" }, gql: owner("User") }, "An empty sky, for now"],
   ["preparing", { gql: hanging, delay: async () => {} }, "Charting the Milky Way"],

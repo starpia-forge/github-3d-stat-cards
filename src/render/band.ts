@@ -1,4 +1,4 @@
-import type { Timeline } from "../timeline.js";
+import type { BandTime } from "../band-time.js";
 import { INK, mix } from "./color.js";
 import { gauss, hash } from "./hash.js";
 import { th, type Ink } from "./ink.js";
@@ -70,7 +70,7 @@ export function drawBackground(ink: Ink, density: Density): string {
 }
 
 /** The perspective grid: the centre line, four dashed guides, and a rung at each year boundary. */
-export function drawGrid(ink: Ink, t: Timeline): string {
+export function drawGrid(ink: Ink, t: BandTime): string {
   const stroke = th(INK, "#9fb3d9");
   const out: string[] = [];
   for (const off of [-84, -42, 0, 42, 84]) {
@@ -90,14 +90,14 @@ export function drawGrid(ink: Ink, t: Timeline): string {
 }
 
 /** Years whose 1 January lies after the first Activity and before today. */
-export function yearBoundaries(t: Timeline): number[] {
+export function yearBoundaries(t: BandTime): number[] {
   const years: number[] = [];
   for (let y = Math.floor(t.start / 12) + 1; y * 12 < t.end; y++) years.push(y);
   return years;
 }
 
 /** The Milky Way Band: a luminous, blurred strip whose brightness and thickness follow Activity. */
-export function drawBand(ink: Ink, t: Timeline, density: Density, uid: (tag: string) => string): { svg: string; glow: Glow } {
+export function drawBand(ink: Ink, t: BandTime, density: Density, uid: (tag: string) => string): { svg: string; glow: Glow } {
   const glow = bandGlow(t);
   const N = 60;
   const pts = Array.from({ length: N + 1 }, (_, i) => {

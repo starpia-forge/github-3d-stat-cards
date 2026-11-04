@@ -69,7 +69,7 @@ describe("v1 acceptance", () => {
     expect(svg).toContain("<title>Mona Lisa&#39;s Milky Way: since Feb 2023 · 691 commits · 6 projects; last 12 months:");
     // every Tier (Nebula wisps, Planet hover, Star spikes or light-mode cross, Starlight halo)
     expect(svg).toMatch(/class="neb[ "]/);
-    expect(svg).toMatch(/class="hy a\d"/);
+    expect(svg).toMatch(/class="hy a(16|18|20|22|24)"/);
     expect(svg).toMatch(/class="gw[ "]/);
     // the labels (header, legends, year ticks, today, the Rift after 2023, the public Nebula's name) as glyph uses
     expect((svg.match(/<use /g) ?? []).length).toBeGreaterThan(150);

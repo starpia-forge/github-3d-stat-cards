@@ -4,7 +4,7 @@ import type { PrivateLevel } from "../config.js";
 import type { GraphQL } from "./graphql.js";
 
 export type SubjectResult =
-  | { kind: "user"; activity: Activity }
+  | { kind: "subject"; activity: Activity }
   | { kind: "organization"; login: string }
   | { kind: "missing" }
   /** `private` is on, but the token belongs to someone other than the Subject. */
@@ -106,12 +106,13 @@ export async function fetchActivity(gql: GraphQL, login: string, now: Date, opti
   const years: number[] = owner.contributionsCollection.contributionYears;
   let queries = 1;
   let cost = 0;
-  const ask = async (w: { from: string; to: string }) => {
+  const gate = limiter(CONCURRENCY);
+  const ask = (w: { from: string; to: string }) => gate(async () => {
     queries++;
     const page = await gql<WindowData>(WINDOW, { login, ...w });
     cost += page.rateLimit?.cost ?? 1;
     return page;
-  };
+  });
   let complete = true;
   const perYear = await Promise.all(
     years.map(async (y) => {
@@ -129,11 +130,30 @@ export async function fetchActivity(gql: GraphQL, login: string, now: Date, opti
   );
   options.log?.(`GitHub GraphQL: ${queries} queries, cost ${cost} for ${owner.login}${complete ? "" : " (incomplete)"}`);
   const repos = aggregate(perYear.flat(), { level, login: owner.login });
-  return { kind: "user", activity: { login: owner.login, fetchedAt: now.toISOString(), complete, repos } };
+  return { kind: "subject", activity: { login: owner.login, fetchedAt: now.toISOString(), complete, repos } };
+}
+
+/** GitHub is asked at most this many questions at once, to stay clear of its secondary rate limits. */
+const CONCURRENCY = 4;
+
+/** A gate that lets at most `max` calls run at once; the rest wait their turn. */
+function limiter(max: number) {
+  let running = 0;
+  const waiting: (() => void)[] = [];
+  return async <T>(task: () => Promise<T>): Promise<T> => {
+    if (running >= max) await new Promise<void>((r) => waiting.push(r));
+    running++;
+    try {
+      return await task();
+    } finally {
+      running--;
+      waiting.shift()?.();
+    }
+  };
 }
 
 /** Whether a repository's Activity counts at this `private` level. */
-export function counts(repo: WindowEntry["repository"], level: PrivateLevel, subject: string): boolean {
+export function isCounted(repo: WindowEntry["repository"], level: PrivateLevel, subject: string): boolean {
   if (!repo.isPrivate) return true;
   if (level === "all") return true;
   return level === "owned" && repo.owner.login.toLowerCase() === subject.toLowerCase();
@@ -145,7 +165,8 @@ export function aggregate(pages: WindowData[], scope: { level: PrivateLevel; log
   for (const page of pages) {
     for (const entry of page.user?.contributionsCollection.commitContributionsByRepository ?? []) {
       const { repository: repo } = entry;
-      if (!counts(repo, scope.level, scope.login)) continue;
+      if (!repo) continue; // a repository the token may not see (for example behind SAML)
+      if (!isCounted(repo, scope.level, scope.login)) continue;
       // keyed by GitHub's opaque node id, so the key never reveals (or can be guessed from) a name
       const key = createHash("sha256").update(repo.id).digest("hex").slice(0, 16);
       let r = repos.get(key);

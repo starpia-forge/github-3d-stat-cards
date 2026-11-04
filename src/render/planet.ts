@@ -9,8 +9,21 @@ import { n, poly } from "./svg.js";
 /** Rings appear at this many commits; a storm spot at STORM_AT. */
 export const RINGS_AT = 120;
 export const STORM_AT = 100;
-/** Hover amplitude: vertical (large Planets / small Planets) and horizontal, in px. */
-export const HOVER = { y: { large: 2.4, small: 1.6 }, x: 0.9 };
+/**
+ * Hover amplitude in px: vertical grows with the Planet's size from 1.6 to 2.4 in steps of 0.2
+ * (2.4 rather than 2.5 keeps both axes together within 2.6 px), horizontal is 0.9.
+ */
+export const HOVER = { y: { min: 1.6, max: 2.4, step: 0.2 }, x: 0.9 };
+
+/** The vertical hover amplitude for a Planet of screen radius `r` (3 px or less: 1.6; 12 px or more: 2.4). */
+export function hoverAmplitude(r: number): number {
+  const t = Math.min(1, Math.max(0, (r - 3) / 9));
+  const steps = Math.round((t * (HOVER.y.max - HOVER.y.min)) / HOVER.y.step);
+  return Math.round((HOVER.y.min + steps * HOVER.y.step) * 10) / 10;
+}
+
+/** The hover classes, one per amplitude: `a16` … `a24`. */
+export const HOVER_CLASSES = Array.from({ length: Math.round((HOVER.y.max - HOVER.y.min) / HOVER.y.step) + 1 }, (_, i) => Math.round((HOVER.y.min + i * HOVER.y.step) * 10) / 10);
 
 export interface PlanetShape {
   /** Disc radius on screen. */
@@ -26,7 +39,7 @@ export interface PlanetShape {
 /** A Planet's shape on screen; shared by placement (bounds) and drawing. */
 export function planetShape(seed: number, commits: number, r: number): PlanetShape {
   const tilt = (hash(seed, 3, 7) - 0.5) * 36;
-  const hoverY = r > 7 ? HOVER.y.large : HOVER.y.small;
+  const hoverY = hoverAmplitude(r);
   let halfW = r;
   let halfH = r;
   let ring: PlanetShape["ring"];
@@ -206,7 +219,7 @@ export function drawPlanet(b: Placed, ctx: DrawContext, detail = { subBands: tru
   const hy = `animation-duration:${n(5.5 + hash(b.seed, 4, 37) * 3.5)}s;animation-delay:-${n(hash(b.seed, 5, 37) * 8)}s`;
   const hx = `animation-duration:${n(8 + hash(b.seed, 6, 37) * 5)}s;animation-delay:-${n(hash(b.seed, 7, 37) * 9)}s`;
   return (
-    `<g class="hy ${r > 7 ? "a2" : "a1"}" style="${hy}"><g class="hx" style="${hx}"><g transform="translate(${n(b.x)} ${n(b.y)})">` +
+    `<g class="hy a${Math.round(hoverAmplitude(r) * 10)}" style="${hy}"><g class="hx" style="${hx}"><g transform="translate(${n(b.x)} ${n(b.y)})">` +
     `<defs>${defs.join("")}</defs>${halo}${ringBack}${body}${ringFront}</g></g></g>`
   );
 }

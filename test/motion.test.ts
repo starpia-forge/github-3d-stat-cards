@@ -23,9 +23,9 @@ describe("motion", () => {
   it("gives each Body its own glow and hover period within 5–11 s, 5.5–9 s and 8–13 s", async () => {
     const svg = await card("theme=dark");
     const periods = (cls: string) => [...svg.matchAll(new RegExp(`class="${cls}[^"]*" style="animation-duration:([0-9.]+)s`, "g"))].map((m) => Number(m[1]));
-    expect(periods("hy a[12]").length).toBeGreaterThan(0);
+    expect(periods("hy a[12][0-9]").length).toBeGreaterThan(0);
     for (const p of periods("gw")) expect(p).toBeGreaterThanOrEqual(5), expect(p).toBeLessThanOrEqual(11);
-    for (const p of periods("hy a[12]")) expect(p).toBeGreaterThanOrEqual(5.5), expect(p).toBeLessThanOrEqual(9);
+    for (const p of periods("hy a[12][0-9]")) expect(p).toBeGreaterThanOrEqual(5.5), expect(p).toBeLessThanOrEqual(9);
     for (const p of periods("hx")) expect(p).toBeGreaterThanOrEqual(8), expect(p).toBeLessThanOrEqual(13);
     expect(new Set(periods("gw")).size).toBeGreaterThan(3);
   });
@@ -39,5 +39,16 @@ describe("motion", () => {
     // the resting frame: same drawing, same resting opacities, without keyframes or timing
     const rest = moving.replace(/ style="animation-[^"]*"/g, "").replace(/@keyframes.*?\}\}(?=\.tw\{animation)/, "").replace(/\.tw\{animation.*?\{animation:none\}\}/, "");
     expect(still).toBe(rest);
+  });
+});
+
+describe("glow in both themes", () => {
+  it.each(["light", "dark"])("gives Stars and Starlight two halo layers in %s mode, with a Star's spikes brightening alongside", async (theme) => {
+    const svg = await card(`theme=${theme}`);
+    const gw = (svg.match(/class="gw"/g) ?? []).length;
+    const gi = (svg.match(/class="gi"/g) ?? []).length;
+    expect(gw).toBeGreaterThan(5);
+    expect(gi).toBe(gw);
+    expect(svg).toMatch(/class="gs"/);
   });
 });

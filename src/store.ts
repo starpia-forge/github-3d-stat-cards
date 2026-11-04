@@ -14,8 +14,6 @@ export interface Stored {
   key: string;
   activity: Activity;
   storedAt: string;
-  /** False when GitHub's limits left a gap in the history. */
-  complete: boolean;
 }
 
 /** Stored data older than this is served as is and refreshed in the background. */

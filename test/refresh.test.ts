@@ -130,7 +130,7 @@ describe("/api/refresh (daily cron)", () => {
     const refresh = new Request("https://card.example/api/refresh");
     expect((await handleRefresh(refresh, { ...deps, cronSecret: "s" })).status).toBe(401);
     const ok = await handleRefresh(new Request(refresh, { headers: { authorization: "Bearer s" } }), { ...deps, cronSecret: "s" });
-    expect(await ok.json()).toEqual({ refreshed: true, kind: "user" });
+    expect(await ok.json()).toEqual({ refreshed: true, kind: "subject" });
     expect(deps.store.data.size).toBe(1);
   });
 });

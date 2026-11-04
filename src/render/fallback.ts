@@ -1,4 +1,4 @@
-import { buildTimeline } from "../timeline.js";
+import { buildBandTime } from "../band-time.js";
 import { drawBackground, drawBand, drawGrid, FULL_DENSITY } from "./band.js";
 import type { RenderOptions } from "./card.js";
 import { Ink } from "./ink.js";
@@ -10,7 +10,7 @@ import { TextWriter } from "./text.js";
 /** Why no Milky Way can be drawn. */
 export type FallbackReason =
   | { kind: "misconfigured"; detail: string }
-  | { kind: "unknown-user"; login: string }
+  | { kind: "unknown-subject"; login: string }
   | { kind: "organization"; login: string }
   | { kind: "no-activity"; login: string }
   | { kind: "preparing" }
@@ -23,7 +23,7 @@ export function fallbackText(r: FallbackReason): { title: string; detail: string
   switch (r.kind) {
     case "misconfigured":
       return { title: "This Card is not configured yet", detail: r.detail };
-    case "unknown-user":
+    case "unknown-subject":
       return { title: "No such GitHub user", detail: `Nobody on GitHub is called ${r.login}; check username in card.config.json` };
     case "organization":
       return { title: "Organizations have no Milky Way", detail: `${r.login} is an organization; the Card maps one person's commits` };
@@ -49,13 +49,12 @@ export function renderFallback(reason: FallbackReason, options: RenderOptions, n
   const tw = new TextWriter(ink);
   let ids = 0;
   const uid = (tag: string) => `${tag}${(ids++).toString(36)}`;
-  const t = buildTimeline([], now);
+  const t = buildBandTime([], now);
   const { title, detail } = fallbackText(reason);
   const band = drawBand(ink, t, { ...FULL_DENSITY, clouds: 140 }, uid);
   const text =
     tw.draw(18, 32, title, { face: "serif", size: 23, fill: TEXT, maxWidth: 810 }) +
-    tw.draw(18, 53, detail, { face: "sans", size: 11, fill: SUB, maxWidth: 810 }) +
-    tw.draw(828, 266, "github-3d-stat-cards", { face: "sans", size: 9.5, fill: SUB, opacity: 0.7, anchor: "end" });
+    tw.draw(18, 53, detail, { face: "sans", size: 11, fill: SUB, maxWidth: 810 });
   const svg = frame(
     `${title}. ${detail}`,
     drawBackground(ink, FULL_DENSITY) + `<g opacity=".6">${drawGrid(ink, t)}${band.svg}</g>` + text,

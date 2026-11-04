@@ -1,7 +1,7 @@
 import type { Activity, RepoActivity } from "../activity.js";
 import type { CardConfig } from "../config.js";
 import { buildLanguages } from "../languages.js";
-import { buildTimeline } from "../timeline.js";
+import { buildBandTime } from "../band-time.js";
 import { drawBackground, drawBand, drawGrid, FULL_DENSITY, type Density } from "./band.js";
 import type { Theme } from "./color.js";
 import { drawStar, drawStarlight, type DrawContext } from "./bodies.js";
@@ -85,7 +85,7 @@ export function renderWith(activity: Activity, config: CardConfig, options: Rend
   const uid = (tag: string) => `${tag}${(ids++).toString(36)}`;
   const repos = activity.repos;
   const now = new Date(activity.fetchedAt);
-  const t = buildTimeline(repos, now);
+  const t = buildBandTime(repos, now);
   const langs = buildLanguages(repos, config.hide, now);
   const facts = {
     name: headerName(activity.login, config.displayName),

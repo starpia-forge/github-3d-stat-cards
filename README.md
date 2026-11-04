@@ -1,6 +1,6 @@
 # Milky Way Card
 
-Your GitHub history as a galaxy. Every repository you have committed to becomes a Body on a
+Your GitHub history as a Milky Way. Every repository you have committed to becomes a Body on a
 Milky Way Band that runs from your first commit (far left, receding into the distance) to today
 (nearest). Small projects are Starlight and Stars, larger ones are banded Planets, and the biggest
 are Nebulae, all coloured by the Languages they are written in.
@@ -28,8 +28,9 @@ are Nebulae, all coloured by the Languages they are written in.
    ```
 
 2. **Import** the fork into [Vercel](https://vercel.com/new) and add one environment variable,
-   `GITHUB_TOKEN` (see [Tokens](#tokens)). Nothing else needs setting up: the Card keeps its data
-   in Vercel's Runtime Cache and refreshes it once a day with Vercel Cron.
+   `GITHUB_TOKEN` (see [Tokens](#tokens)). Add `CRON_SECRET` too (any long random string) to turn
+   on the daily refresh by Vercel Cron; without it the Card still refreshes itself when its data
+   is older than 12 hours. The Card keeps its data in Vercel's Runtime Cache, which needs no setup.
 
    Or use the button. It **copies** this repository into a new one under your account rather
    than forking it, so you will not receive later changes from upstream automatically.
@@ -82,7 +83,7 @@ someone else, no private data is fetched and the Card explains why.
 
 | Parameter | Effect |
 |---|---|
-| `theme=light` / `theme=dark` | Forces a theme. Without it the Card follows the viewer's system setting (`prefers-color-scheme`). |
+| `theme=light` / `theme=dark` | Forces a theme. Without it the Card follows the Visitor's system setting (`prefers-color-scheme`). |
 | `animate=false` | A still frame. The Card also stops moving for Visitors who prefer reduced motion. |
 
 ## How it works

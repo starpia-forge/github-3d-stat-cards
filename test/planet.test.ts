@@ -3,8 +3,8 @@ import { buildLanguages } from "../src/languages.js";
 import type { DrawContext } from "../src/render/bodies.js";
 import { Ink } from "../src/render/ink.js";
 import { drawOrder, overlaps, placeBodies, planetRadius } from "../src/render/place.js";
-import { drawPlanet, HOVER, planetShape } from "../src/render/planet.js";
-import { buildTimeline } from "../src/timeline.js";
+import { drawPlanet, HOVER, hoverAmplitude, planetShape } from "../src/render/planet.js";
+import { buildBandTime } from "../src/band-time.js";
 import { synthetic } from "./synthetic.js";
 
 const now = "2026-11-05T00:00:00Z";
@@ -22,7 +22,7 @@ const activity = synthetic({
     { total: 20, from: "2026-08", months: 2 },
   ],
 });
-const t = buildTimeline(activity.repos, new Date(now));
+const t = buildBandTime(activity.repos, new Date(now));
 const placed = placeBodies(activity.repos, t);
 const ctxFor = (mode: "light" | "dark") => {
   let i = 0;
@@ -54,8 +54,12 @@ describe("Planets", () => {
     expect(drawPlanet(planet(80), ctxFor("dark"))).toContain("halo");
   });
 
+  it("hover by an amplitude that grows with size, from 1.6 to 2.4 px", () => {
+    expect([2, 3, 7.5, 12, 20].map(hoverAmplitude)).toEqual([1.6, 1.6, 2, 2.4, 2.4]);
+  });
+
   it("hover only by translate, wrapped around the placement", () => {
-    expect(drawPlanet(planet(80), ctxFor("dark"))).toMatch(/^<g class="hy a\d"[^>]*><g class="hx"[^>]*><g transform="translate\(/);
+    expect(drawPlanet(planet(80), ctxFor("dark"))).toMatch(/^<g class="hy a(16|18|20|22|24)"[^>]*><g class="hx"[^>]*><g transform="translate\(/);
   });
 
   it("keep their rings and hover clearance free of other solid Bodies on screen", () => {
@@ -64,7 +68,7 @@ describe("Planets", () => {
     const shape = planetShape(ringed.seed, 199, ringed.r * ringed.k);
     expect(ringed.halfW).toBeCloseTo(shape.halfW);
     expect(shape.halfW).toBeGreaterThan(shape.r * 2 + HOVER.x);
-    expect(shape.halfH).toBeGreaterThanOrEqual(shape.r + HOVER.y.large);
+    expect(shape.halfH).toBeGreaterThanOrEqual(shape.r + HOVER.y.min);
   });
 
   it("draw larger Bodies behind smaller ones", () => {

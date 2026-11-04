@@ -7,7 +7,7 @@ import { everyDay, fakeGitHub, type Day } from "./fake-github.js";
 
 const now = new Date("2026-11-05T12:00:00Z");
 const sum = (days: Day[]) => days.reduce((a, d) => a + d.commitCount, 0);
-const total = (r: Awaited<ReturnType<typeof fetchActivity>>) => (r.kind === "user" ? r.activity.repos.reduce((a, x) => a + x.total, 0) : NaN);
+const total = (r: Awaited<ReturnType<typeof fetchActivity>>) => (r.kind === "subject" ? r.activity.repos.reduce((a, x) => a + x.total, 0) : NaN);
 
 describe("complete histories", () => {
   it("fills in a year with monthly windows when a repository has more than 100 active days", async () => {
@@ -15,7 +15,7 @@ describe("complete histories", () => {
     const gh = fakeGitHub("mona", days, [2025]);
     const r = await fetchActivity(gh.gql, "mona", now);
     expect(total(r)).toBe(sum(days));
-    expect(r.kind === "user" && r.activity.complete).toBe(true);
+    expect(r.kind === "subject" && r.activity.complete).toBe(true);
     expect(gh.windows).toHaveLength(1 + 12);
   });
 
@@ -30,7 +30,7 @@ describe("complete histories", () => {
     const gh = fakeGitHub("mona", days, [2025]);
     const r = await fetchActivity(gh.gql, "mona", now);
     expect(total(r)).toBe(sum(days));
-    const a = r.kind === "user" ? r.activity.repos.find((x) => x.name === "mona/a")! : undefined;
+    const a = r.kind === "subject" ? r.activity.repos.find((x) => x.name === "mona/a")! : undefined;
     expect(a!.months).toEqual({ "2025-01": 1, "2025-02": 6, "2026-01": 5 });
   });
 
@@ -38,14 +38,14 @@ describe("complete histories", () => {
     const days: Day[] = Array.from({ length: 150 }, (_, i) => ({ repo: `r${i}`, occurredAt: `2025-${String((i % 12) + 1).padStart(2, "0")}-10T00:00:00Z`, commitCount: 1 + (i % 5) }));
     const gh = fakeGitHub("mona", days, [2025]);
     const r = await fetchActivity(gh.gql, "mona", now);
-    expect(r.kind === "user" && r.activity.repos.length).toBe(150);
-    expect(r.kind === "user" && r.activity.complete).toBe(true);
+    expect(r.kind === "subject" && r.activity.repos.length).toBe(150);
+    expect(r.kind === "subject" && r.activity.complete).toBe(true);
   });
 
   it("marks the history incomplete when a month still has more than 100 repositories", async () => {
     const days: Day[] = Array.from({ length: 130 }, (_, i) => ({ repo: `r${i}`, occurredAt: "2025-03-10T00:00:00Z", commitCount: 1 }));
     const r = await fetchActivity(fakeGitHub("mona", days, [2025]).gql, "mona", now);
-    expect(r.kind === "user" && r.activity.complete).toBe(false);
+    expect(r.kind === "subject" && r.activity.complete).toBe(false);
     expect(total(r)).toBe(100);
   });
 
@@ -77,13 +77,13 @@ describe("incomplete data on the Card", () => {
     await handleMilkyWay(new Request("https://card.example/api/milky-way"), deps);
     const key = storageKey({ username: "mona", displayName: undefined, hide: [], private: "off" }, "t");
     const before = deps.store.data.get(key) as Stored;
-    expect(before.complete).toBe(true);
+    expect(before.activity.complete).toBe(true);
     const later = new Date(now.getTime() + 13 * 3_600_000);
     const next = { ...deps, gql: fakeGitHub("mona", crowded, [2026]).gql, now: () => later };
     await handleMilkyWay(new Request("https://card.example/api/milky-way"), next);
     await Promise.all(deps.background);
     const after = deps.store.data.get(key) as Stored;
-    expect(after.complete).toBe(true);
+    expect(after.activity.complete).toBe(true);
     expect(after.activity).toEqual(before.activity);
     expect(after.storedAt).toBe(later.toISOString());
   });
