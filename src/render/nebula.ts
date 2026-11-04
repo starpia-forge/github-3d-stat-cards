@@ -4,8 +4,8 @@ import { gauss, hash } from "./hash.js";
 import { th } from "./ink.js";
 import { colorOf } from "./palette.js";
 import type { Placed } from "./place.js";
-import { n } from "./svg.js";
-import type { TextWriter } from "./text.js";
+import { H, n, W } from "./svg.js";
+import { fit, measure, type TextWriter } from "./text.js";
 
 /**
  * A Nebula (200+ commits): a gas cloud coloured by its Language Mix and stretched along the Band.
@@ -21,7 +21,7 @@ export function drawNebula(b: Placed, ctx: DrawContext): string {
   const cols = mixList.length ? mixList : [{ key: langs.primaryOf(b.repo), share: 1 }];
   const blobs: { key: string | null; share: number; cx: number; cy: number; rx: number; ry: number; ang: number }[] = [];
   cols.forEach((m, q) => {
-    const count = Math.max(2, Math.round(m.share * 14));
+    const count = Math.max(2, Math.round(m.share * 10));
     for (let j = 0; j < count; j++) {
       blobs.push({
         key: m.key,
@@ -98,10 +98,23 @@ export function drawNebula(b: Placed, ctx: DrawContext): string {
   return parts.join("");
 }
 
-/** The name under a public Nebula. Private repositories never get a label. */
-export function nebulaLabel(b: Placed, tw: TextWriter, login: string): string {
-  if (b.repo.isPrivate || !b.repo.name) return "";
-  const [owner, repo] = b.repo.name.split("/");
-  const name = owner?.toLowerCase() === login.toLowerCase() && repo ? repo : b.repo.name;
-  return tw.draw(b.x, b.y + b.h * b.k * 0.62 + 10, name, { face: "sans", size: 10, fill: th(INK, "#dfe6ee"), opacity: 0.85, anchor: "middle", maxWidth: Math.max(80, b.w * b.k * 1.3) });
+/** The names under public Nebulae, larger Nebulae first; a name that would collide with one already drawn is skipped. Private repositories never get a label. */
+export function nebulaLabels(nebulae: Placed[], tw: TextWriter, login: string): string {
+  const boxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const out: string[] = [];
+  const size = 10;
+  for (const b of [...nebulae].sort((p, q) => q.repo.total - p.repo.total || p.repo.key.localeCompare(q.repo.key))) {
+    if (b.repo.isPrivate || !b.repo.name) continue;
+    const [owner, repo] = b.repo.name.split("/");
+    const raw = owner?.toLowerCase() === login.toLowerCase() && repo ? repo : b.repo.name;
+    const name = fit(raw, "sans", size, Math.max(80, b.w * b.k * 1.3));
+    const w = measure(name, "sans", size);
+    const x = Math.min(W - 4 - w / 2, Math.max(4 + w / 2, b.x));
+    const y = b.y + b.h * b.k * 0.62 + 10;
+    const box = { x0: x - w / 2 - 3, x1: x + w / 2 + 3, y0: y - size, y1: y + 3 };
+    if (y > H - 26 || boxes.some((o) => o.x0 < box.x1 && box.x0 < o.x1 && o.y0 < box.y1 && box.y0 < o.y1)) continue;
+    boxes.push(box);
+    out.push(tw.draw(x, y, name, { face: "sans", size, fill: th(INK, "#dfe6ee"), opacity: 0.85, anchor: "middle" }));
+  }
+  return out.join("");
 }

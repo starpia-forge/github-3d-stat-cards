@@ -4,7 +4,7 @@ import { hash } from "./hash.js";
 import { th } from "./ink.js";
 import { colorOf } from "./palette.js";
 import type { Placed } from "./place.js";
-import { n } from "./svg.js";
+import { n, poly } from "./svg.js";
 
 /** Rings appear at this many commits; a storm spot at STORM_AT. */
 export const RINGS_AT = 120;
@@ -89,7 +89,7 @@ export function drawPlanet(b: Placed, ctx: DrawContext, detail = { subBands: tru
     pts.push([r * 1.3, pts[pts.length - 1]![1]]);
     return pts;
   };
-  const toD = (pts: [number, number][]) => pts.map((p, i) => `${i ? "L" : "M"}${n(p[0])} ${n(p[1])}`).join("");
+  const toD = (pts: [number, number][]) => poly(pts);
 
   const bands: string[] = [];
   for (let i = 0; i < count; i++) {
@@ -100,7 +100,7 @@ export function drawPlanet(b: Placed, ctx: DrawContext, detail = { subBands: tru
     const wav = r * 0.035 * (0.5 + hash(b.seed, i, 19));
     const top: [number, number][] = i === 0 ? [[-r * 1.3, -r * 1.4], [r * 1.3, -r * 1.4]] : curve(s[i]!, wav, i * 1.7);
     const bot: [number, number][] = i === count - 1 ? [[r * 1.3, r * 1.4], [-r * 1.3, r * 1.4]] : curve(s[i + 1]!, wav, (i + 1) * 1.7).reverse();
-    bands.push(ink.el("path", { d: `${toD([...top, ...bot])}Z`, fill: col }));
+    bands.push(ink.el("path", { d: poly([...top, ...bot], true), fill: col }));
     if (detail.subBands && r > 7 && i > 0 && i < count - 1) {
       const sm = s[i]! + (s[i + 1]! - s[i]!) * (0.35 + 0.3 * hash(b.seed, i, 23));
       bands.push(

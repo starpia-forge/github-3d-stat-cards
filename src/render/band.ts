@@ -3,7 +3,7 @@ import { INK, mix } from "./color.js";
 import { gauss, hash } from "./hash.js";
 import { th, type Ink } from "./ink.js";
 import { bandGlow, bandY, BX0, BX1, flatX, project, taper, type Glow } from "./scene.js";
-import { H, n, W } from "./svg.js";
+import { H, n, poly, W } from "./svg.js";
 
 export interface Dot {
   x: number;
@@ -35,7 +35,7 @@ export function dotPaths(ink: Ink, dots: Dot[], color: string | { light: string;
     .join("");
 }
 
-const line = (pts: { x: number; y: number }[]) => `M${pts.map((q) => `${n(q.x)} ${n(q.y)}`).join("L")}`;
+const line = (pts: { x: number; y: number }[]) => poly(pts);
 
 export interface Density {
   /** Star-cloud points inside the Band. */
@@ -123,7 +123,7 @@ export function drawBand(ink: Ink, t: Timeline, density: Density, uid: (tag: str
   const shape = (s: number) => {
     const top = pts.map((p) => project(p.x, p.y - p.h * s));
     const bot = pts.map((p) => project(p.x, p.y + p.h * s)).reverse();
-    return `${line([...top, ...bot])}Z`;
+    return poly([...top, ...bot], true);
   };
   const blur = (tag: string, light: number, dark: number) => {
     const ids = { light: uid(tag), dark: uid(tag) };

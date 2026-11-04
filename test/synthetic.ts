@@ -48,3 +48,19 @@ export function synthetic(spec: SyntheticSpec): Activity {
   });
   return { login: "synthetic", fetchedAt: spec.now, repos: repos.filter((r) => r.total > 0).sort((a, b) => b.total - a.total) };
 }
+
+/**
+ * A maximum-load Subject: `count` repositories over 15 years, with the Tier mix of a very busy
+ * account (many Starlight and Stars, dozens of Planets, a few dozen Nebulae).
+ */
+export function heavy(count = 400, seed = 11): Activity {
+  const rand = rng(seed);
+  const repos: SyntheticSpec["repos"] = [];
+  for (let i = 0; i < count; i++) {
+    const roll = rand();
+    const total = roll < 0.45 ? 1 + Math.floor(rand() * 9) : roll < 0.75 ? 10 + Math.floor(rand() * 40) : roll < 0.92 ? 50 + Math.floor(rand() * 150) : 200 + Math.floor(rand() * 2000);
+    const start = Math.floor(rand() * 178);
+    repos.push({ total, from: `${2011 + Math.floor(start / 12)}-${String((start % 12) + 1).padStart(2, "0")}`, months: 1 + Math.floor(rand() * Math.min(24, 179 - start)), name: i % 3 ? undefined : `synthetic/project-with-a-long-name-${i}`, isPrivate: i % 3 === 1 });
+  }
+  return synthetic({ seed, now: "2026-11-05T00:00:00Z", repos });
+}

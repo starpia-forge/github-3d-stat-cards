@@ -1,15 +1,15 @@
-import type { Activity } from "../activity.js";
+import type { Activity, RepoActivity } from "../activity.js";
 import type { CardConfig } from "../config.js";
 import { buildLanguages } from "../languages.js";
 import { buildTimeline } from "../timeline.js";
-import { drawBackground, drawBand, drawGrid, FULL_DENSITY } from "./band.js";
+import { drawBackground, drawBand, drawGrid, FULL_DENSITY, type Density } from "./band.js";
 import type { Theme } from "./color.js";
 import { drawStar, drawStarlight, type DrawContext } from "./bodies.js";
 import { Ink } from "./ink.js";
 import { drawBandLabels, drawHeader, drawLanguageLegend, drawNarrowLabels, drawTierLegend, headerLine, headerName, monthLabel, NARROW_CSS, percent } from "./labels.js";
 import { drawOrder, placeBodies } from "./place.js";
 import { drawPlanet } from "./planet.js";
-import { drawNebula, nebulaLabel } from "./nebula.js";
+import { drawNebula, nebulaLabels } from "./nebula.js";
 import { motionCss, stripTiming } from "./motion.js";
 import { frame } from "./svg.js";
 import { TextWriter } from "./text.js";
@@ -22,8 +22,63 @@ export interface RenderOptions {
 
 export const DEFAULT_OPTIONS: RenderOptions = { theme: "auto", animate: true };
 
-/** The Milky Way Card. */
+/** Every Card stays at or under this many bytes. */
+export const SIZE_BUDGET = 100_000;
+
+/** How much of the scene is drawn; a step down the ladder is taken only when the Card is too large. */
+export interface Reduction {
+  density: Density;
+  subBands: boolean;
+  /** At most this many Bodies are drawn; the ones with the fewest commits melt into the Band's glow. */
+  cap: number;
+}
+
+/**
+ * The fixed reduction order: star-cloud density first, then background stars, then Planet
+ * sub-bands. The Body cap comes last and is found by search.
+ */
+export const LADDER: Omit<Reduction, "cap">[] = [
+  { density: FULL_DENSITY, subBands: true },
+  { density: { ...FULL_DENSITY, clouds: 190 }, subBands: true },
+  { density: { ...FULL_DENSITY, clouds: 60 }, subBands: true },
+  { density: { clouds: 60, background: { light: 20, dark: 60 } }, subBands: true },
+  { density: { clouds: 60, background: { light: 8, dark: 24 } }, subBands: true },
+  { density: { clouds: 60, background: { light: 8, dark: 24 } }, subBands: false },
+];
+
+const size = (s: string) => Buffer.byteLength(s);
+
+/** The Milky Way Card, within the size budget. */
 export function renderCard(activity: Activity, config: CardConfig, options: RenderOptions = DEFAULT_OPTIONS): string {
+  const all = activity.repos.length;
+  for (const step of LADDER) {
+    const svg = renderWith(activity, config, options, { ...step, cap: all });
+    if (size(svg) <= SIZE_BUDGET) return svg;
+  }
+  // The Body cap: the largest number of Bodies that fits.
+  const last = LADDER[LADDER.length - 1]!;
+  let lo = 0;
+  let hi = all - 1;
+  let best = renderWith(activity, config, options, { ...last, cap: 0 });
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const svg = renderWith(activity, config, options, { ...last, cap: mid });
+    if (size(svg) <= SIZE_BUDGET) {
+      best = svg;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  return best;
+}
+
+/** The Bodies drawn under a cap: those with the most commits. */
+export function visibleBodies(repos: RepoActivity[], cap: number): RepoActivity[] {
+  if (cap >= repos.length) return repos;
+  return [...repos].sort((a, b) => b.total - a.total || a.key.localeCompare(b.key)).slice(0, cap);
+}
+
+/** Renders the Card at one level of reduction. Totals, the Band's glow and the legend always count every repository. */
+export function renderWith(activity: Activity, config: CardConfig, options: RenderOptions, reduction: Reduction): string {
   const ink = new Ink(options.theme);
   const tw = new TextWriter(ink);
   let ids = 0;
@@ -40,9 +95,9 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
     approximate: activity.complete === false,
   };
 
-  const background = drawBackground(ink, FULL_DENSITY);
+  const background = drawBackground(ink, reduction.density);
   const grid = drawGrid(ink, t);
-  const band = drawBand(ink, t, FULL_DENSITY, uid);
+  const band = drawBand(ink, t, reduction.density, uid);
   const defs: string[] = [];
   const sharedIds = new Map<string, string>();
   const ctx: DrawContext = {
@@ -59,16 +114,16 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
       return id;
     },
   };
-  const placed = drawOrder(placeBodies(repos, t));
+  const placed = drawOrder(placeBodies(visibleBodies(repos, reduction.cap), t));
   const bodies = placed
     .map((b) => {
       if (b.tier === "starlight") return drawStarlight(b, ctx);
       if (b.tier === "star") return drawStar(b, ctx);
-      if (b.tier === "planet") return drawPlanet(b, ctx);
+      if (b.tier === "planet") return drawPlanet(b, ctx, { subBands: reduction.subBands });
       return drawNebula(b, ctx);
     })
     .join("");
-  const names = placed.filter((b) => b.tier === "nebula").map((b) => nebulaLabel(b, tw, activity.login)).join("");
+  const names = nebulaLabels(placed.filter((b) => b.tier === "nebula"), tw, activity.login);
   const labels = names + drawHeader(tw, facts) + drawTierLegend(ink, tw) + drawLanguageLegend(ink, tw, langs) + drawBandLabels(tw, t, band.glow);
 
   const recent = langs.empty ? "no commits in the last 12 months" : `last 12 months: ${langs.legend.map((e) => `${e.key} ${percent(e.share)}`).join(", ")}`;
