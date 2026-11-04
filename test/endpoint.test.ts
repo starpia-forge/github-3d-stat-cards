@@ -27,6 +27,13 @@ describe("/api/milky-way", () => {
     await expect(body).toMatchFileSnapshot(`__snapshots__/card-${theme}.svg`);
   });
 
+  it("escapes the text summary", async () => {
+    const body = await (await handleMilkyWay(request, { ...deps, config: { username: rec.login, displayName: "A<b>&\"c" } })).text();
+    expect(body).toContain("<title>A&lt;b&gt;&amp;&quot;c&#39;s Milky Way: since Apr 2024");
+    expect(body).toMatch(/aria-label="A&lt;b&gt;&amp;&quot;c&#39;s Milky Way/);
+    expect(body).not.toContain("<text");
+  });
+
   it("follows prefers-color-scheme without a theme", async () => {
     const body = await (await handleMilkyWay(request, deps)).text();
     expect(body).toContain("@media (prefers-color-scheme:dark)");
