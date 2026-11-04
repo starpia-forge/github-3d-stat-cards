@@ -2,38 +2,53 @@ import { middlePeriod, primaryLanguage, type Activity } from "../activity.js";
 import type { CardConfig } from "../config.js";
 import { TIERS, tierOf } from "../tiers.js";
 import { buildTimeline } from "../timeline.js";
-import { esc, frame, H, n, W } from "./svg.js";
+import { drawBackground, drawBand, drawGrid, FULL_DENSITY } from "./band.js";
+import { INK, tune, type Theme } from "./color.js";
+import { gauss, seedOf } from "./hash.js";
+import { Ink, th } from "./ink.js";
+import { bandY, flatX, project } from "./scene.js";
+import { esc, frame, n } from "./svg.js";
 
-const MARGIN = 40;
-const BAND_Y = 150;
+export interface RenderOptions {
+  /** A forced theme, or `auto` to follow `prefers-color-scheme`. */
+  theme: Theme | "auto";
+  animate: boolean;
+}
+
+export const DEFAULT_OPTIONS: RenderOptions = { theme: "auto", animate: true };
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export const TEXT = th("#1f2328", "#e6edf3");
+export const SUB = th("#59636e", "#9aa4b0");
 
-/** The Milky Way Card (flat Band: Bodies by time position and Tier size). */
-export function renderCard(activity: Activity, config: CardConfig): string {
+/** The Milky Way Card. */
+export function renderCard(activity: Activity, config: CardConfig, options: RenderOptions = DEFAULT_OPTIONS): string {
+  const ink = new Ink(options.theme);
+  let ids = 0;
+  const uid = (tag: string) => `${tag}${(ids++).toString(36)}`;
   const repos = activity.repos;
   const t = buildTimeline(repos, new Date(activity.fetchedAt));
-  const x = (i: number) => MARGIN + t.pos(i) * (W - 2 * MARGIN);
   const commits = repos.reduce((a, r) => a + r.total, 0);
   const since = `${MONTHS[t.start % 12]} ${Math.floor(t.start / 12)}`;
   const name = config.displayName ?? activity.login;
-  const header = `${name} · since ${since} · ${commits} commits · ${repos.length} projects`;
 
-  const rifts = t.rifts
-    .map((r) => `<rect x="${n(x(r.from))}" y="${BAND_Y - 6}" width="${n(x(r.to) - x(r.from))}" height="12" fill="#000" fill-opacity=".25"/>`)
-    .join("");
+  const background = drawBackground(ink, FULL_DENSITY);
+  const grid = drawGrid(ink, t);
+  const band = drawBand(ink, t, FULL_DENSITY, uid);
   const bodies = repos
     .map((r) => {
-      const color = primaryLanguage(r)?.color ?? "#8b949e";
-      return `<circle cx="${n(x(middlePeriod(r)))}" cy="${BAND_Y}" r="${n(TIERS[tierOf(r.total)].size)}" fill="${color}" fill-opacity=".85"/>`;
+      const x = flatX(t, middlePeriod(r));
+      const q = project(x, bandY(x) + Math.max(-84, Math.min(84, gauss(seedOf(r.key)) * 30)));
+      const base = primaryLanguage(r)?.color ?? "#8b949e";
+      return ink.el("circle", { cx: n(q.x), cy: n(q.y), r: n(TIERS[tierOf(r.total)].size * q.k), fill: th(tune(base, "light"), tune(base, "dark")), stroke: th(INK, "none"), "stroke-width": ".6" });
     })
     .join("");
+  const text = (x: number, y: number, s: string, size: number, fill = SUB, extra = "") =>
+    ink.el("text", { x, y, "font-size": size, fill, "font-family": "Inter,system-ui,sans-serif" }, esc(s)).replace("<text ", `<text ${extra}`);
+  const labels =
+    text(18, 32, name, 23, TEXT, 'font-style="italic" ') +
+    text(18, 53, `since ${since} · ${commits.toLocaleString("en-US")} commits · ${repos.length} projects`, 11);
 
-  return frame(
-    `Milky Way of ${name}: ${commits} commits across ${repos.length} projects since ${since}`,
-    `<g font-family="Inter,system-ui,sans-serif" fill="#8b949e"><text x="${MARGIN}" y="34" font-size="15">${esc(header)}</text></g>` +
-      `<line x1="${MARGIN}" y1="${BAND_Y}" x2="${W - MARGIN}" y2="${BAND_Y}" stroke="#8b949e" stroke-opacity=".35"/>` +
-      rifts +
-      bodies +
-      `<text x="${W - MARGIN}" y="${H - 24}" font-family="Inter,system-ui,sans-serif" font-size="11" fill="#8b949e" text-anchor="end">today →</text>`,
-  );
+  const label = `Milky Way of ${name}: ${commits} commits across ${repos.length} projects since ${since}`;
+  return frame(label, background + grid + band.svg + bodies + labels, `<style>${ink.css()}</style>`);
 }

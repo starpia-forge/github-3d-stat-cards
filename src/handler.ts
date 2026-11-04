@@ -1,7 +1,7 @@
 import { parseConfig } from "./config.js";
 import { fetchActivity } from "./github/contributions.js";
 import { createGraphQL, GitHubError, type GraphQL } from "./github/graphql.js";
-import { renderCard } from "./render/card.js";
+import { renderCard, type RenderOptions } from "./render/card.js";
 import { renderFallback } from "./render/fallback.js";
 
 export interface Deps {
@@ -17,7 +17,8 @@ export interface Deps {
 export const CARD_CACHE = "public, max-age=21600, s-maxage=21600";
 
 /** `/api/milky-way`: answers with the Subject's Card, or a Fallback Card when none can be drawn. */
-export async function handleMilkyWay(_request: Request, deps: Deps): Promise<Response> {
+export async function handleMilkyWay(request: Request, deps: Deps): Promise<Response> {
+  const options = optionsOf(new URL(request.url));
   const parsed = parseConfig(deps.config);
   if (!parsed.ok) return fallback("Card is not configured", parsed.reason);
   const { config } = parsed;
@@ -28,7 +29,7 @@ export async function handleMilkyWay(_request: Request, deps: Deps): Promise<Res
     if (result.kind === "missing") return fallback("Unknown GitHub user", `No GitHub user is called ${config.username}`);
     if (result.kind === "organization") return fallback("Organizations are not supported", `${result.login} is an organization`);
     if (result.activity.repos.length === 0) return fallback("No Activity yet", `${result.activity.login} has no public commits`);
-    return svg(renderCard(result.activity, config), CARD_CACHE);
+    return svg(renderCard(result.activity, config, options), CARD_CACHE);
   } catch (e) {
     if (e instanceof GitHubError && e.kind === "rate-limited") return fallback("GitHub is busy", "Try again in a little while");
     return fallback("GitHub could not be reached", "Try again in a little while");
@@ -39,3 +40,9 @@ const svg = (body: string, cache: string) =>
   new Response(body, { headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": cache } });
 
 const fallback = (title: string, detail: string) => svg(renderFallback(title, detail), "no-store");
+
+/** URL parameters: `theme=light|dark` (default: follow prefers-color-scheme) and `animate=false`. */
+export function optionsOf(url: URL): RenderOptions {
+  const theme = url.searchParams.get("theme");
+  return { theme: theme === "light" || theme === "dark" ? theme : "auto", animate: url.searchParams.get("animate") !== "false" };
+}

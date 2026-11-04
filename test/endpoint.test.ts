@@ -20,6 +20,18 @@ describe("/api/milky-way", () => {
     await expect(body).toMatchFileSnapshot("__snapshots__/card.svg");
   });
 
+  it.each(["light", "dark"])("renders the %s theme on its own", async (theme) => {
+    const body = await (await handleMilkyWay(new Request(`https://card.example/api/milky-way?theme=${theme}`), deps)).text();
+    expect(body).not.toContain("prefers-color-scheme");
+    expect(Buffer.byteLength(body)).toBeLessThanOrEqual(BUDGET);
+    await expect(body).toMatchFileSnapshot(`__snapshots__/card-${theme}.svg`);
+  });
+
+  it("follows prefers-color-scheme without a theme", async () => {
+    const body = await (await handleMilkyWay(request, deps)).text();
+    expect(body).toContain("@media (prefers-color-scheme:dark)");
+  });
+
   it.each([
     ["a missing config", { ...deps, config: undefined }, "Card is not configured"],
     ["a config without username", { ...deps, config: { hide: [] } }, "username is required"],

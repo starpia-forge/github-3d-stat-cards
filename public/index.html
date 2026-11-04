@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milky Way Card</title>
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #f6f8fa; color: #1f2328; }
+  main { display: grid; gap: 16px; padding: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 600px), 1fr)); }
+  figure { margin: 0; padding: 16px; border-radius: 8px; }
+  .light { background: #ffffff; } .dark { background: #0d1117; color: #e6edf3; }
+  img { display: block; width: 100%; max-width: 846px; }
+  figcaption { margin-top: 8px; font-size: 12px; opacity: .7; }
+</style>
+<main>
+  <figure class="light"><img src="/api/milky-way?theme=light" alt="Milky Way Card, light"><figcaption>theme=light</figcaption></figure>
+  <figure class="dark"><img src="/api/milky-way?theme=dark" alt="Milky Way Card, dark"><figcaption>theme=dark</figcaption></figure>
+</main>
+</html>
