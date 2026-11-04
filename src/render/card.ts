@@ -6,7 +6,7 @@ import { drawBackground, drawBand, drawGrid, FULL_DENSITY } from "./band.js";
 import type { Theme } from "./color.js";
 import { drawStar, drawStarlight, type DrawContext } from "./bodies.js";
 import { Ink } from "./ink.js";
-import { drawBandLabels, drawHeader, drawLanguageLegend, drawTierLegend, headerLine, headerName, monthLabel, percent } from "./labels.js";
+import { drawBandLabels, drawHeader, drawLanguageLegend, drawNarrowLabels, drawTierLegend, headerLine, headerName, monthLabel, NARROW_CSS, percent } from "./labels.js";
 import { drawOrder, placeBodies } from "./place.js";
 import { drawPlanet } from "./planet.js";
 import { drawNebula, nebulaLabel } from "./nebula.js";
@@ -73,6 +73,9 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
 
   const recent = langs.empty ? "no commits in the last 12 months" : `last 12 months: ${langs.legend.map((e) => `${e.key} ${percent(e.share)}`).join(", ")}`;
   const summary = `${facts.name}'s Milky Way: ${headerLine(facts)}; ${recent}`;
-  const svg = frame(summary, background + grid + band.svg + bodies + labels, `<style>${motionCss(options.animate)}${ink.css()}</style><defs>${defs.join("")}${tw.glyphDefs()}</defs>`);
+  // One SVG for every width: the scene, the wide labels, and the narrow labels a media query swaps in.
+  const narrow = drawNarrowLabels(ink, tw, facts, langs);
+  const body = `${background}<g class="sc">${grid}${band.svg}${bodies}</g><g class="wd">${labels}</g><g class="nw">${narrow}</g>`;
+  const svg = frame(summary, body, `<style>${motionCss(options.animate)}${NARROW_CSS}${ink.css()}</style><defs>${defs.join("")}${tw.glyphDefs()}</defs>`);
   return options.animate ? svg : stripTiming(svg);
 }

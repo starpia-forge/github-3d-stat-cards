@@ -122,3 +122,38 @@ export function drawLanguageLegend(ink: Ink, tw: TextWriter, langs: Languages): 
   });
   return out.join("");
 }
+
+/** Below this rendered width (CSS px of the image) the Card switches to its narrow layout. */
+export const NARROW_MAX_WIDTH = 480;
+/** Narrow text is this much larger, so it stays readable at about 300 px. */
+const NARROW_SCALE = 2.1;
+
+/**
+ * Narrow layout (phones): fewer, larger labels — the header and the top three Languages — beside
+ * the scene, which shrinks into the lower left. Everything else is hidden by the media query.
+ */
+export function drawNarrowLabels(ink: Ink, tw: TextWriter, f: HeaderFacts, langs: Languages): string {
+  const s = NARROW_SCALE;
+  const out = [
+    tw.draw(18, 50, f.name, { face: "serif", size: 23 * s, fill: TEXT, maxWidth: 810 }),
+    tw.draw(18, 50 + 21 * s, headerLine(f), { face: "sans", size: 11 * s, fill: SUB, maxWidth: 810 }),
+  ];
+  const lx = 428;
+  if (langs.empty) {
+    out.push(tw.draw(lx, 170, "No commits in the", { face: "sans", size: 11 * s, fill: SUB }), tw.draw(lx, 170 + 14 * s, "last 12 months", { face: "sans", size: 11 * s, fill: SUB }));
+    return out.join("");
+  }
+  [...langs.legend]
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 3)
+    .forEach((e, i) => {
+      const y = 150 + i * 36;
+      out.push(ink.el("circle", { cx: n(lx + 4 * s), cy: n(y - 4 * s), r: n(4 * s), fill: themedColor(langs, e.key), stroke: th(INK, "none"), "stroke-width": "1.2" }));
+      out.push(tw.draw(lx + 14 * s, y, e.key, { face: "sans", size: 12 * s, fill: TEXT, maxWidth: 250 }));
+      out.push(tw.draw(lx + 400, y, percent(e.share), { face: "bold", size: 12 * s, fill: TEXT, anchor: "end" }));
+    });
+  return out.join("");
+}
+
+/** Switches between the wide and the narrow layout by the image's own rendered width. */
+export const NARROW_CSS = `.nw{display:none}@media (max-width:${NARROW_MAX_WIDTH}px){.wd{display:none}.nw{display:inline}.sc{transform:translate(2px,85px) scale(.62)}}`;
