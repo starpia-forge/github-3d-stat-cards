@@ -1,4 +1,4 @@
-import { middlePeriod, type RepoActivity } from "../activity.js";
+import { middlePeriod, periodIndex, type RepoActivity } from "../activity.js";
 import { tierOf, type Tier } from "../tiers.js";
 import type { Timeline } from "../timeline.js";
 import { gauss, hash, seedOf } from "./hash.js";
@@ -29,6 +29,9 @@ export interface Placed {
   /** Half extents of the screen bounds: the disc or core, plus rings and hover clearance for Planets. */
   halfW: number;
   halfH: number;
+  /** Nebulae only: the cloud's flat width and height (scaled by k on screen). */
+  w: number;
+  h: number;
 }
 
 /** Larger Tiers sit nearer the Band's centre. */
@@ -55,10 +58,64 @@ export function placeBodies(repos: RepoActivity[], t: Timeline): Placed[] {
     const reach = tier === "planet" ? r * 2.3 : r;
     const fx = Math.min(BX1 - reach - 2, Math.max(BX0 + reach + 2, flatX(t, middlePeriod(repo))));
     const off = Math.max(-84, Math.min(84, gauss(seed) * 34 * SPREAD[tier]));
-    return reproject({ repo, tier, seed, fx, fy: bandY(fx) + off, x: 0, y: 0, k: depthAt(fx), r, halfW: 0, halfH: 0 });
+    return reproject({ repo, tier, seed, fx, fy: bandY(fx) + off, x: 0, y: 0, k: depthAt(fx), r, halfW: 0, halfH: 0, w: 0, h: 0 });
   });
+  placeNebulae(bodies.filter((b) => b.tier === "nebula"), t);
   relax(bodies.filter(isSolid));
   return bodies;
+}
+
+/** Nebula width follows the active span (with a minimum); height grows slowly with commits. */
+export function nebulaSize(repo: RepoActivity, t: Timeline): { w: number; h: number; from: number; to: number } {
+  const ps = Object.keys(repo.months).map(periodIndex);
+  const from = flatX(t, Math.min(...ps));
+  const to = flatX(t, Math.max(...ps) + 1);
+  return { w: Math.min(112, Math.max(58, (to - from) * 1.1)), h: 40 + 8 * Math.log2(repo.total / 200 + 1), from, to };
+}
+
+/** Vertical slots around the centre line, nearest first. */
+const SLOTS = [0, -54, 54, -27, 27, -81, 81];
+
+/**
+ * The largest Nebula sits on the centre line; each next one takes the nearest slot (above or
+ * below, then shifted along the Band, then smaller) where its cloud does not collide with any
+ * Nebula already placed.
+ */
+function placeNebulae(nebulae: Placed[], t: Timeline): void {
+  const done: Placed[] = [];
+  const sorted = [...nebulae].sort((a, b) => b.repo.total - a.repo.total || a.repo.key.localeCompare(b.repo.key));
+  for (const b of sorted) {
+    const size = nebulaSize(b.repo, t);
+    const home = Math.min(BX1 - size.w / 2, Math.max(BX0 + size.w / 2, b.fx));
+    let found = false;
+    for (let shrink = 1; !found && shrink > 0.3; shrink *= 0.85) {
+      b.w = size.w * shrink;
+      b.h = size.h * shrink;
+      for (const dx of [0, -0.5, 0.5, -1, 1, -1.5, 1.5]) {
+        for (const dy of SLOTS) {
+          b.fx = Math.min(BX1 - b.w / 2, Math.max(BX0 + b.w / 2, home + dx * b.w));
+          b.fy = bandY(b.fx) + dy * shrink;
+          reproject(b);
+          if (!done.some((o) => collides(o, b))) {
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+    }
+    done.push(b);
+  }
+}
+
+const collides = (a: Placed, b: Placed) => Math.abs(a.x - b.x) < a.halfW + b.halfW && Math.abs(a.y - b.y) < a.halfH + b.halfH;
+
+/** Pairs of Nebulae whose clouds collide. */
+export function nebulaCollisions(bodies: Placed[]): [Placed, Placed][] {
+  const nebs = bodies.filter((b) => b.tier === "nebula");
+  const out: [Placed, Placed][] = [];
+  for (let a = 0; a < nebs.length; a++) for (let c = a + 1; c < nebs.length; c++) if (collides(nebs[a]!, nebs[c]!)) out.push([nebs[a]!, nebs[c]!]);
+  return out;
 }
 
 function reproject(b: Placed): Placed {
@@ -66,7 +123,11 @@ function reproject(b: Placed): Placed {
   b.x = q.x;
   b.y = q.y;
   b.k = q.k;
-  if (b.tier === "planet") {
+  if (b.tier === "nebula") {
+    // the cloud's dense part; its soft glow may overlap a neighbour's
+    b.halfW = b.w * b.k * 0.45;
+    b.halfH = b.h * b.k * 0.42;
+  } else if (b.tier === "planet") {
     const shape = planetShape(b.seed, b.repo.total, b.r * b.k);
     b.halfW = shape.halfW;
     b.halfH = shape.halfH;

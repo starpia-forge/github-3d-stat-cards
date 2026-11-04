@@ -74,8 +74,8 @@ export function drawGrid(ink: Ink, t: Timeline): string {
   const stroke = th(INK, "#9fb3d9");
   const out: string[] = [];
   for (const off of [-84, -42, 0, 42, 84]) {
-    const pts = Array.from({ length: 40 }, (_, i) => {
-      const x = BX0 + ((BX1 - BX0) * i) / 39;
+    const pts = Array.from({ length: 20 }, (_, i) => {
+      const x = BX0 + ((BX1 - BX0) * i) / 19;
       return project(x, bandY(x) + off);
     });
     out.push(ink.el("path", { d: line(pts), fill: "none", stroke, "stroke-opacity": th(0.16, 0.12), "stroke-width": ".7", "stroke-dasharray": off === 0 ? undefined : "2 4" }));
@@ -99,7 +99,7 @@ export function yearBoundaries(t: Timeline): number[] {
 /** The Milky Way Band: a luminous, blurred strip whose brightness and thickness follow Activity. */
 export function drawBand(ink: Ink, t: Timeline, density: Density, uid: (tag: string) => string): { svg: string; glow: Glow } {
   const glow = bandGlow(t);
-  const N = 120;
+  const N = 60;
   const pts = Array.from({ length: N + 1 }, (_, i) => {
     const x = BX0 + ((BX1 - BX0) * i) / N;
     const tp = taper(x);

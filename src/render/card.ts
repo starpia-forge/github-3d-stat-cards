@@ -1,17 +1,16 @@
 import type { Activity } from "../activity.js";
 import type { CardConfig } from "../config.js";
 import { buildLanguages } from "../languages.js";
-import { TIERS } from "../tiers.js";
 import { buildTimeline } from "../timeline.js";
 import { drawBackground, drawBand, drawGrid, FULL_DENSITY } from "./band.js";
-import { INK, type Theme } from "./color.js";
+import type { Theme } from "./color.js";
 import { drawStar, drawStarlight, type DrawContext } from "./bodies.js";
-import { Ink, th } from "./ink.js";
+import { Ink } from "./ink.js";
 import { drawBandLabels, drawHeader, drawLanguageLegend, drawTierLegend, headerLine, headerName, monthLabel, percent } from "./labels.js";
-import { themedColor } from "./palette.js";
 import { drawOrder, placeBodies } from "./place.js";
 import { drawPlanet } from "./planet.js";
-import { frame, n } from "./svg.js";
+import { drawNebula, nebulaLabel } from "./nebula.js";
+import { frame } from "./svg.js";
 import { TextWriter } from "./text.js";
 
 export interface RenderOptions {
@@ -64,11 +63,11 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
       if (b.tier === "starlight") return drawStarlight(b, ctx);
       if (b.tier === "star") return drawStar(b, ctx);
       if (b.tier === "planet") return drawPlanet(b, ctx);
-      // Nebulae: a placeholder until their own drawing lands
-      return ink.el("circle", { cx: n(b.x), cy: n(b.y), r: n(TIERS[b.tier].size * b.k), fill: themedColor(langs, langs.primaryOf(b.repo)), stroke: th(INK, "none"), "stroke-width": ".6" });
+      return drawNebula(b, ctx);
     })
     .join("");
-  const labels = drawHeader(tw, facts) + drawTierLegend(ink, tw) + drawLanguageLegend(ink, tw, langs) + drawBandLabels(tw, t, band.glow);
+  const names = placed.filter((b) => b.tier === "nebula").map((b) => nebulaLabel(b, tw, activity.login)).join("");
+  const labels = names + drawHeader(tw, facts) + drawTierLegend(ink, tw) + drawLanguageLegend(ink, tw, langs) + drawBandLabels(tw, t, band.glow);
 
   const recent = langs.empty ? "no commits in the last 12 months" : `last 12 months: ${langs.legend.map((e) => `${e.key} ${percent(e.share)}`).join(", ")}`;
   const summary = `${facts.name}'s Milky Way: ${headerLine(facts)}; ${recent}`;
