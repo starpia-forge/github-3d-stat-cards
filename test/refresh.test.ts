@@ -82,7 +82,7 @@ describe("stored data and background refresh", () => {
     const deps = fixtureDeps({ gql: gh.gql, delay: async () => {} });
     const res = await handleMilkyWay(request, deps);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.text()).toContain("Preparing");
+    expect(await res.text()).toContain("Charting the Milky Way");
     expect(deps.background).toHaveLength(1);
     gh.state.mode = "ok";
     gh.state.release();

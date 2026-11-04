@@ -49,7 +49,7 @@ describe("/api/milky-way", () => {
     ["a missing config", fixtureDeps({ config: undefined }), "Card is not configured"],
     ["a config without username", fixtureDeps({ config: { hide: [] } }), "username is required"],
     ["an invalid login", fixtureDeps({ config: { username: "-x-" } }), "not a valid GitHub login"],
-    ["an unknown user", fixtureDeps({ gql: async () => ({ repositoryOwner: null }) as any }), "Unknown GitHub user"],
+    ["an unknown user", fixtureDeps({ gql: async () => ({ repositoryOwner: null }) as any }), "No such GitHub user"],
     ["no token", fixtureDeps({ gql: undefined, token: undefined }), "GITHUB_TOKEN is not set"],
   ])("answers %s with a Fallback Card", async (_case, d, text) => {
     const res = await handleMilkyWay(request, d as any);

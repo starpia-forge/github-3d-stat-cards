@@ -2,7 +2,7 @@ import { parseConfig, type CardConfig } from "./config.js";
 import { fetchActivity, type SubjectResult } from "./github/contributions.js";
 import { createGraphQL, GitHubError, type GraphQL } from "./github/graphql.js";
 import { renderCard, type RenderOptions } from "./render/card.js";
-import { renderFallback } from "./render/fallback.js";
+import { renderFallback, type FallbackReason } from "./render/fallback.js";
 import { isStale, readStored, storageKey, type Store, type Stored } from "./store.js";
 
 export interface Deps {
@@ -28,8 +28,9 @@ export const FIRST_RENDER_BUDGET_MS = 7_000;
 /** `/api/milky-way`: answers with the Subject's Card, or a Fallback Card when none can be drawn. */
 export async function handleMilkyWay(request: Request, deps: Deps): Promise<Response> {
   const options = optionsOf(new URL(request.url));
+  const fallback = (reason: FallbackReason) => svg(renderFallback(reason, options, deps.now()), "no-store");
   const ready = prepare(deps);
-  if ("fallback" in ready) return ready.fallback;
+  if ("reason" in ready) return fallback(ready.reason);
   const { config, key, refresh } = ready;
 
   const stored = await readStored(deps.store, key);
@@ -44,17 +45,22 @@ export async function handleMilkyWay(request: Request, deps: Deps): Promise<Resp
   const raced = await Promise.race([work.then((r) => ({ done: r }), (e: unknown) => ({ failed: e })), delay(FIRST_RENDER_BUDGET_MS).then(() => "late" as const)]);
   if (raced === "late") {
     deps.waitUntil(work.catch((e) => deps.log?.(`first fetch failed: ${e}`)));
-    return fallback("Preparing the Milky Way", "The first map takes a moment; check back soon");
+    return fallback({ kind: "preparing" });
   }
-  if ("failed" in raced) return githubFallback(raced.failed);
-  return subjectResponse(raced.done.result, raced.done.stored, config, options);
+  if ("failed" in raced) return fallback(githubReason(raced.failed));
+  const { result, stored: fresh } = raced.done;
+  if (result.kind === "missing") return fallback({ kind: "unknown-user", login: config.username });
+  if (result.kind === "organization") return fallback({ kind: "organization", login: result.login });
+  if (result.kind === "private-mismatch") return fallback({ kind: "private-mismatch", login: config.username, tokenOwner: result.tokenOwner });
+  if (!fresh) return fallback({ kind: "no-activity", login: result.activity.login });
+  return card(fresh, config, options);
 }
 
 /** The daily refresh (Vercel Cron). */
 export async function handleRefresh(request: Request, deps: Deps & { cronSecret?: string }): Promise<Response> {
   if (deps.cronSecret && request.headers.get("authorization") !== `Bearer ${deps.cronSecret}`) return new Response("unauthorized", { status: 401 });
   const ready = prepare(deps);
-  if ("fallback" in ready) return new Response("not configured", { status: 500 });
+  if ("reason" in ready) return new Response("not configured", { status: 500 });
   try {
     const { result } = await ready.refresh();
     return Response.json({ refreshed: result.kind === "user", kind: result.kind });
@@ -63,11 +69,11 @@ export async function handleRefresh(request: Request, deps: Deps & { cronSecret?
   }
 }
 
-function prepare(deps: Deps): { fallback: Response } | { config: CardConfig; key: string; refresh: () => Promise<{ result: SubjectResult; stored?: Stored }> } {
+function prepare(deps: Deps): { reason: FallbackReason } | { config: CardConfig; key: string; refresh: () => Promise<{ result: SubjectResult; stored?: Stored }> } {
   const parsed = parseConfig(deps.config);
-  if (!parsed.ok) return { fallback: fallback("Card is not configured", parsed.reason) };
+  if (!parsed.ok) return { reason: { kind: "misconfigured", detail: `card.config.json: ${parsed.reason}` } };
   const { config } = parsed;
-  if (!deps.token && !deps.gql) return { fallback: fallback("Card is not configured", "GITHUB_TOKEN is not set") };
+  if (!deps.token && !deps.gql) return { reason: { kind: "misconfigured", detail: "GITHUB_TOKEN is not set in the Vercel project" } };
   const token = deps.token ?? "";
   const key = storageKey(config, token);
   const gql = deps.gql ?? createGraphQL(token);
@@ -92,25 +98,14 @@ function prepare(deps: Deps): { fallback: Response } | { config: CardConfig; key
   return { config, key, refresh };
 }
 
-function subjectResponse(result: SubjectResult, stored: Stored | undefined, config: CardConfig, options: RenderOptions): Response {
-  if (result.kind === "missing") return fallback("Unknown GitHub user", `No GitHub user is called ${config.username}`);
-  if (result.kind === "organization") return fallback("Organizations are not supported", `${result.login} is an organization`);
-  if (result.kind === "private-mismatch") return fallback("Private Activity needs the Subject's own token", `The token belongs to ${result.tokenOwner}, not ${config.username}`);
-  if (!stored) return fallback("No Activity yet", `${result.activity.login} has no public commits`);
-  return card(stored, config, options);
-}
-
-function githubFallback(e: unknown): Response {
-  if (e instanceof GitHubError && e.kind === "rate-limited") return fallback("GitHub is busy", "Try again in a little while");
-  return fallback("GitHub could not be reached", "Try again in a little while");
+function githubReason(e: unknown): FallbackReason {
+  return e instanceof GitHubError && e.kind === "rate-limited" ? { kind: "rate-limited" } : { kind: "unreachable" };
 }
 
 const card = (stored: Stored, config: CardConfig, options: RenderOptions) => svg(renderCard(stored.activity, config, options), CARD_CACHE);
 
 const svg = (body: string, cache: string) =>
   new Response(body, { headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": cache } });
-
-const fallback = (title: string, detail: string) => svg(renderFallback(title, detail), "no-store");
 
 /** URL parameters: `theme=light|dark` (default: follow prefers-color-scheme) and `animate=false`. */
 export function optionsOf(url: URL): RenderOptions {
