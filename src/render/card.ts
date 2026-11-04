@@ -10,6 +10,7 @@ import { drawBandLabels, drawHeader, drawLanguageLegend, drawTierLegend, headerL
 import { drawOrder, placeBodies } from "./place.js";
 import { drawPlanet } from "./planet.js";
 import { drawNebula, nebulaLabel } from "./nebula.js";
+import { motionCss, stripTiming } from "./motion.js";
 import { frame } from "./svg.js";
 import { TextWriter } from "./text.js";
 
@@ -71,5 +72,6 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
 
   const recent = langs.empty ? "no commits in the last 12 months" : `last 12 months: ${langs.legend.map((e) => `${e.key} ${percent(e.share)}`).join(", ")}`;
   const summary = `${facts.name}'s Milky Way: ${headerLine(facts)}; ${recent}`;
-  return frame(summary, background + grid + band.svg + bodies + labels, `<style>${ink.css()}</style><defs>${defs.join("")}${tw.glyphDefs()}</defs>`);
+  const svg = frame(summary, background + grid + band.svg + bodies + labels, `<style>${motionCss(options.animate)}${ink.css()}</style><defs>${defs.join("")}${tw.glyphDefs()}</defs>`);
+  return options.animate ? svg : stripTiming(svg);
 }

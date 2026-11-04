@@ -10,7 +10,7 @@ import { n } from "./svg.js";
 export const RINGS_AT = 120;
 export const STORM_AT = 100;
 /** Hover amplitude: vertical (large Planets / small Planets) and horizontal, in px. */
-export const HOVER = { y: { large: 2.5, small: 1.6 }, x: 0.9 };
+export const HOVER = { y: { large: 2.4, small: 1.6 }, x: 0.9 };
 
 export interface PlanetShape {
   /** Disc radius on screen. */
