@@ -63,7 +63,12 @@ describe("fetchActivity on the recorded public fixture", () => {
   it("matches every recorded day exactly once", async () => {
     const result = await fetchActivity(replay(rec), rec.login, new Date(rec.recordedAt));
     if (result.kind !== "user") throw new Error(result.kind);
-    const days = rec.calls.slice(1).flatMap((c) => c.data.user.contributionsCollection.commitContributionsByRepository.flatMap((e: any) => e.contributions.nodes));
+    // a year that was filled in with monthly windows counts those, not the cut-short yearly window
+    const windows = rec.calls.filter((c) => c.data.user);
+    const isYear = (c: (typeof windows)[number]) => String(c.variables.from).endsWith("-01-01T00:00:00.000Z") && String(c.variables.to).slice(0, 4) === String(c.variables.from).slice(0, 4) && !String(c.variables.to).startsWith(String(c.variables.from).slice(0, 7));
+    const filled = new Set(windows.filter((c) => !isYear(c)).map((c) => String(c.variables.from).slice(0, 4)));
+    const used = windows.filter((c) => (isYear(c) ? !filled.has(String(c.variables.from).slice(0, 4)) : true));
+    const days = used.flatMap((c) => c.data.user.contributionsCollection.commitContributionsByRepository.flatMap((e: any) => e.contributions.nodes));
     const recorded = days.reduce((a: number, d: any) => a + d.commitCount, 0);
     expect(result.activity.repos.reduce((a, r) => a + r.total, 0)).toBe(recorded);
     for (const r of result.activity.repos) {

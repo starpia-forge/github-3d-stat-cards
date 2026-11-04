@@ -37,6 +37,7 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
     since: monthLabel(t.start),
     commits: repos.reduce((a, r) => a + r.total, 0),
     projects: repos.length,
+    approximate: activity.complete === false,
   };
 
   const background = drawBackground(ink, FULL_DENSITY);

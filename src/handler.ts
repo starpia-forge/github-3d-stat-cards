@@ -73,9 +73,19 @@ function prepare(deps: Deps): { fallback: Response } | { config: CardConfig; key
   const gql = deps.gql ?? createGraphQL(token);
   /** Fetches from GitHub and stores a successful result; a failure leaves stored data untouched. */
   const refresh = async () => {
-    const result = await fetchActivity(gql, config.username, deps.now(), { private: config.private });
+    const result = await fetchActivity(gql, config.username, deps.now(), { private: config.private, log: deps.log });
     if (result.kind !== "user" || result.activity.repos.length === 0) return { result };
-    const stored: Stored = { version: 1, key, activity: result.activity, storedAt: deps.now().toISOString(), complete: true };
+    const complete = result.activity.complete !== false;
+    const stored: Stored = { version: 1, key, activity: result.activity, storedAt: deps.now().toISOString(), complete };
+    if (!complete) {
+      // An incomplete refresh never replaces complete stored data; only the refresh time moves on.
+      const previous = await readStored(deps.store, key);
+      if (previous?.complete) {
+        const kept = { ...previous, storedAt: stored.storedAt };
+        await deps.store.set(key, kept);
+        return { result, stored: kept };
+      }
+    }
     await deps.store.set(key, stored);
     return { result, stored };
   };

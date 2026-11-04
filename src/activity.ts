@@ -28,6 +28,8 @@ export interface Activity {
   login: string;
   /** ISO timestamp of the fetch; "today" for the Card. */
   fetchedAt: string;
+  /** False when GitHub's limits left a gap: the totals are lower bounds. */
+  complete?: boolean;
   repos: RepoActivity[];
 }
 

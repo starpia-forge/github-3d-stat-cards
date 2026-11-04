@@ -1,5 +1,5 @@
 {
- "recordedAt": "2026-11-04T17:00:13.726Z",
+ "recordedAt": "2026-11-04T17:03:40.360Z",
  "login": "starpia-forge",
  "calls": [
   {
@@ -27,6 +27,9 @@
     "to": "2024-12-31T23:59:59.000Z"
    },
    "data": {
+    "rateLimit": {
+     "cost": 1
+    },
     "user": {
      "contributionsCollection": {
       "totalRepositoriesWithContributedCommits": 1,
@@ -74,6 +77,9 @@
     "to": "2025-12-31T23:59:59.000Z"
    },
    "data": {
+    "rateLimit": {
+     "cost": 1
+    },
     "user": {
      "contributionsCollection": {
       "totalRepositoriesWithContributedCommits": 10,
@@ -562,9 +568,12 @@
    "variables": {
     "login": "starpia-forge",
     "from": "2026-01-01T00:00:00.000Z",
-    "to": "2026-11-04T17:00:13.726Z"
+    "to": "2026-11-04T17:03:40.360Z"
    },
    "data": {
+    "rateLimit": {
+     "cost": 1
+    },
     "user": {
      "contributionsCollection": {
       "totalRepositoriesWithContributedCommits": 11,

@@ -20,6 +20,7 @@ const SUBJECT = `query($login: String!) {
 const VIEWER = `query { viewer { login } }`;
 
 const WINDOW = `query($login: String!, $from: DateTime!, $to: DateTime!) {
+  rateLimit { cost }
   user(login: $login) {
     contributionsCollection(from: $from, to: $to) {
       totalRepositoriesWithContributedCommits
@@ -48,6 +49,7 @@ export interface WindowEntry {
 }
 
 export interface WindowData {
+  rateLimit?: { cost: number };
   user: {
     contributionsCollection: {
       totalRepositoriesWithContributedCommits: number;
@@ -59,6 +61,35 @@ export interface WindowData {
 export interface FetchOptions {
   /** Which private repositories count (default `off`: public only). */
   private?: PrivateLevel;
+  log?: (message: string) => void;
+}
+
+/** GitHub returns at most this many repositories per window and this many days per repository. */
+export const MAX_REPOSITORIES = 100;
+export const MAX_DAYS = 100;
+
+/**
+ * A window is cut short when a repository's returned days hold fewer commits than its total
+ * (`contributions.totalCount` counts commits, not days), or when more repositories exist than returned.
+ */
+export function truncation(page: WindowData): { days: boolean; repositories: boolean } {
+  const cc = page.user?.contributionsCollection;
+  if (!cc) return { days: false, repositories: false };
+  return {
+    days: cc.commitContributionsByRepository.some((e) => e.contributions.nodes.reduce((a, d) => a + d.commitCount, 0) < e.contributions.totalCount),
+    repositories: cc.commitContributionsByRepository.length >= MAX_REPOSITORIES && cc.totalRepositoriesWithContributedCommits > cc.commitContributionsByRepository.length,
+  };
+}
+
+/** Calendar-month windows covering one year, ending at `now`; disjoint, so no day is counted twice. */
+export function monthlyWindows(year: number, now: Date): { from: string; to: string }[] {
+  const out: { from: string; to: string }[] = [];
+  for (let m = 0; m < 12; m++) {
+    const start = Date.UTC(year, m, 1);
+    if (start > now.getTime()) break;
+    out.push({ from: new Date(start).toISOString(), to: new Date(Math.min(Date.UTC(year, m + 1, 1) - 1000, now.getTime())).toISOString() });
+  }
+  return out;
 }
 
 /** Reads the Subject's commit Activity, one contribution year per query. */
@@ -73,12 +104,32 @@ export async function fetchActivity(gql: GraphQL, login: string, now: Date, opti
     if (viewer.toLowerCase() !== owner.login.toLowerCase()) return { kind: "private-mismatch", tokenOwner: viewer };
   }
   const years: number[] = owner.contributionsCollection.contributionYears;
-  const windows = years.map((y) => ({
-    from: new Date(Date.UTC(y, 0, 1)).toISOString(),
-    to: new Date(Math.min(Date.UTC(y + 1, 0, 1) - 1000, now.getTime())).toISOString(),
-  }));
-  const pages = await Promise.all(windows.map((w) => gql<WindowData>(WINDOW, { login, ...w })));
-  return { kind: "user", activity: { login: owner.login, fetchedAt: now.toISOString(), repos: aggregate(pages, { level, login: owner.login }) } };
+  let queries = 1;
+  let cost = 0;
+  const ask = async (w: { from: string; to: string }) => {
+    queries++;
+    const page = await gql<WindowData>(WINDOW, { login, ...w });
+    cost += page.rateLimit?.cost ?? 1;
+    return page;
+  };
+  let complete = true;
+  const perYear = await Promise.all(
+    years.map(async (y) => {
+      const yearly = await ask({ from: new Date(Date.UTC(y, 0, 1)).toISOString(), to: new Date(Math.min(Date.UTC(y + 1, 0, 1) - 1000, now.getTime())).toISOString() });
+      const cut = truncation(yearly);
+      if (!cut.days && !cut.repositories) return [yearly];
+      // Fill the year in with monthly windows instead of the cut-short yearly one.
+      const months = await Promise.all(monthlyWindows(y, now).map(ask));
+      for (const m of months) {
+        const c = truncation(m);
+        if (c.days || c.repositories) complete = false;
+      }
+      return months;
+    }),
+  );
+  options.log?.(`GitHub GraphQL: ${queries} queries, cost ${cost} for ${owner.login}${complete ? "" : " (incomplete)"}`);
+  const repos = aggregate(perYear.flat(), { level, login: owner.login });
+  return { kind: "user", activity: { login: owner.login, fetchedAt: now.toISOString(), complete, repos } };
 }
 
 /** Whether a repository's Activity counts at this `private` level. */
