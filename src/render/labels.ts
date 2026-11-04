@@ -5,7 +5,7 @@ import { INK } from "./color.js";
 import { th, type Ink } from "./ink.js";
 import { themedColor } from "./palette.js";
 import { bandY, BX1, flatX, project, type Glow } from "./scene.js";
-import { H, n } from "./svg.js";
+import { H, n, W } from "./svg.js";
 import { canDraw, measure, type TextWriter } from "./text.js";
 
 export const TEXT = th("#1f2328", "#e6edf3");
@@ -96,7 +96,10 @@ export function drawBandLabels(tw: TextWriter, t: Timeline, glow: Glow): string 
   for (const r of t.rifts) {
     const x = flatX(t, (r.from + r.to) / 2);
     const q = project(x, bandY(x) - glow.half(x) - 6);
-    out.push(tw.draw(q.x, q.y, `${r.months} mo quiet`, { ...style, anchor: "middle" }));
+    const label = `${r.months} mo quiet`;
+    // kept inside the canvas: a Rift near the far end sits close to the left edge
+    const half = measure(label, "sans", style.size) / 2;
+    out.push(tw.draw(Math.max(4 + half, Math.min(W - 4 - half, q.x)), q.y, label, { ...style, anchor: "middle" }));
   }
   return out.join("");
 }

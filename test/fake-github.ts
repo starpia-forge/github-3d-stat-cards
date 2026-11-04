@@ -12,11 +12,29 @@ export interface Day {
  * limits: at most 100 repositories per window (most commits first) and 100 days per repository,
  * with `totalCount` counting commits.
  */
-export function fakeGitHub(login: string, days: Day[], years: number[]) {
+export interface RepoMeta {
+  isPrivate?: boolean;
+  owner?: string;
+  languages?: [string, string, number][];
+}
+
+export function fakeGitHub(login: string, days: Day[], years: number[], meta: Record<string, RepoMeta> = {}, viewer = login) {
   const windows: { from: string; to: string }[] = [];
+  const repository = (repo: string) => {
+    const m = meta[repo] ?? {};
+    const owner = m.owner ?? login;
+    const langs = m.languages ?? [["Go", "#00ADD8", 1]];
+    return {
+      id: `R_${owner}/${repo}`,
+      nameWithOwner: `${owner}/${repo}`,
+      isPrivate: !!m.isPrivate,
+      owner: { login: owner },
+      languages: { totalSize: langs.reduce((a, l) => a + l[2], 0), edges: langs.map(([name, color, size]) => ({ size, node: { name, color } })) },
+    };
+  };
   const gql: GraphQL = async (query, vars: any = {}) => {
     if (query.includes("repositoryOwner")) return { repositoryOwner: { __typename: "User", login, contributionsCollection: { contributionYears: years } } } as any;
-    if (query.includes("viewer")) return { viewer: { login } } as any;
+    if (query.includes("viewer")) return { viewer: { login: viewer } } as any;
     windows.push({ from: vars.from, to: vars.to });
     const from = Date.parse(vars.from);
     const to = Date.parse(vars.to);
@@ -30,7 +48,7 @@ export function fakeGitHub(login: string, days: Day[], years: number[]) {
         contributionsCollection: {
           totalRepositoriesWithContributedCommits: ranked.length,
           commitContributionsByRepository: ranked.slice(0, 100).map(([repo, ds]) => ({
-            repository: { id: `R_${repo}`, nameWithOwner: `${login}/${repo}`, isPrivate: false, owner: { login }, languages: { totalSize: 1, edges: [{ size: 1, node: { name: "Go", color: "#00ADD8" } }] } },
+            repository: repository(repo),
             contributions: { totalCount: ds.reduce((s, d) => s + d.commitCount, 0), nodes: ds.slice(0, 100).map(({ occurredAt, commitCount }) => ({ occurredAt, commitCount })) },
           })),
         },
