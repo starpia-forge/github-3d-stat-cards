@@ -48,7 +48,7 @@ describe("placeBodies", () => {
 
   it("keeps larger Tiers nearer the centre of the Band", () => {
     const month = (i: number) => `${2020 + Math.floor(i / 12) % 5}-${String((i % 12) + 1).padStart(2, "0")}`;
-    const many = Array.from({ length: 300 }, (_, i) => repo(1000 + i, { [month(i)]: i % 15 ? 3 : 120 }));
+    const many = Array.from({ length: 300 }, (_, i) => repo(1000 + i, { [month(i)]: i % 30 ? 3 : 60 }));
     const placed = placeBodies(many, buildTimeline(many, now));
     const spread = (tier: string) => {
       const offs = placed.filter((b) => b.tier === tier).map((b) => Math.abs(b.fy - bandY(b.fx)));

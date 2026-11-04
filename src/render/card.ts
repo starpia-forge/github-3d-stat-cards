@@ -9,7 +9,8 @@ import { drawStar, drawStarlight, type DrawContext } from "./bodies.js";
 import { Ink, th } from "./ink.js";
 import { drawBandLabels, drawHeader, drawLanguageLegend, drawTierLegend, headerLine, headerName, monthLabel, percent } from "./labels.js";
 import { themedColor } from "./palette.js";
-import { placeBodies } from "./place.js";
+import { drawOrder, placeBodies } from "./place.js";
+import { drawPlanet } from "./planet.js";
 import { frame, n } from "./svg.js";
 import { TextWriter } from "./text.js";
 
@@ -57,13 +58,13 @@ export function renderCard(activity: Activity, config: CardConfig, options: Rend
       return id;
     },
   };
-  const order = { starlight: 0, star: 1, nebula: 2, planet: 3 };
-  const placed = placeBodies(repos, t).sort((a, b) => order[a.tier] - order[b.tier] || a.k - b.k || a.repo.key.localeCompare(b.repo.key));
+  const placed = drawOrder(placeBodies(repos, t));
   const bodies = placed
     .map((b) => {
       if (b.tier === "starlight") return drawStarlight(b, ctx);
       if (b.tier === "star") return drawStar(b, ctx);
-      // Planets and Nebulae: placeholders until their own drawings land
+      if (b.tier === "planet") return drawPlanet(b, ctx);
+      // Nebulae: a placeholder until their own drawing lands
       return ink.el("circle", { cx: n(b.x), cy: n(b.y), r: n(TIERS[b.tier].size * b.k), fill: themedColor(langs, langs.primaryOf(b.repo)), stroke: th(INK, "none"), "stroke-width": ".6" });
     })
     .join("");
