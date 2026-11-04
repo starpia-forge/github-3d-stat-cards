@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { handleMilkyWay } from "../src/handler.js";
 import { motionCss, unsafeKeyframes } from "../src/render/motion.js";
-import fixture from "./fixtures/public-activity.json" with { type: "json" };
-import { replay, type Recording } from "./replay.js";
+import { fixtureDeps } from "./deps.js";
 
-const rec = fixture as Recording;
-const card = async (q: string) =>
-  (await handleMilkyWay(new Request(`https://card.example/api/milky-way?${q}`), { config: { username: rec.login }, token: "t", now: () => new Date(rec.recordedAt), gql: replay(rec) })).text();
+const card = async (q: string) => (await handleMilkyWay(new Request(`https://card.example/api/milky-way?${q}`), fixtureDeps())).text();
 
 describe("motion", () => {
   it("animates only opacity and pure translate", () => {

@@ -4,6 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { handleMilkyWay } from "../src/handler.js";
+import { MemoryStore } from "../src/store.js";
 import { replay, type Recording } from "../test/replay.js";
 
 const [out, file = "test/fixtures/public-activity.json"] = process.argv.slice(2);
@@ -18,6 +19,8 @@ for (const q of variants) {
     token: "t",
     now: () => new Date(rec.recordedAt),
     gql: replay(rec),
+    store: new MemoryStore(),
+    waitUntil: () => {},
   });
   const body = await res.text();
   const name = `card-${q.replace(/[=&]/g, "-") || "auto"}.svg`;
