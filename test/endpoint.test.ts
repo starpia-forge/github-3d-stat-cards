@@ -34,6 +34,14 @@ describe("/api/milky-way", () => {
     expect(body).not.toContain("<text");
   });
 
+  it("hides Languages from the legend and the text summary", async () => {
+    const shown = await (await handleMilkyWay(request, deps)).text();
+    const hidden = await (await handleMilkyWay(request, { ...deps, config: { username: rec.login, hide: ["Go"] } })).text();
+    expect(shown).toMatch(/<title>[^<]*last 12 months: Go /);
+    expect(hidden).not.toMatch(/<title>[^<]*Go/);
+    expect(hidden).toContain("20 projects");
+  });
+
   it("follows prefers-color-scheme without a theme", async () => {
     const body = await (await handleMilkyWay(request, deps)).text();
     expect(body).toContain("@media (prefers-color-scheme:dark)");

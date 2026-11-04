@@ -1,7 +1,9 @@
+import type { Languages } from "../languages.js";
 import type { Timeline } from "../timeline.js";
 import { yearBoundaries } from "./band.js";
 import { INK } from "./color.js";
 import { th, type Ink } from "./ink.js";
+import { themedColor } from "./palette.js";
 import { bandY, BX1, flatX, project, type Glow } from "./scene.js";
 import { H, n } from "./svg.js";
 import { canDraw, measure, type TextWriter } from "./text.js";
@@ -99,3 +101,24 @@ export function drawBandLabels(tw: TextWriter, t: Timeline, glow: Glow): string 
   return out.join("");
 }
 
+
+/** Share as shown in the legend. */
+export const percent = (share: number): string => (share > 0 && share < 0.01 ? "<1%" : `${Math.round(share * 100)}%`);
+
+/** The language legend, right column: "last 12 months", the top six plus Other with their shares. */
+export function drawLanguageLegend(ink: Ink, tw: TextWriter, langs: Languages): string {
+  const lx = 668;
+  const y0 = 66;
+  const out = [tw.draw(lx, y0 - 16, "last 12 months", { face: "sans", size: 9.5, fill: SUB, opacity: 0.9 })];
+  if (langs.empty) {
+    out.push(tw.draw(lx, y0, "No commits in the", { face: "sans", size: 11, fill: SUB }), tw.draw(lx, y0 + 15, "last 12 months", { face: "sans", size: 11, fill: SUB }));
+    return out.join("");
+  }
+  langs.legend.forEach((e, i) => {
+    const y = y0 + i * 18;
+    out.push(ink.el("circle", { cx: lx + 4, cy: y - 4, r: 4, fill: themedColor(langs, e.key), stroke: th(INK, "none"), "stroke-width": ".7" }));
+    out.push(tw.draw(lx + 14, y, e.key, { face: "sans", size: 12, fill: TEXT, maxWidth: 104 }));
+    out.push(tw.draw(lx + 156, y, percent(e.share), { face: "bold", size: 12, fill: TEXT, anchor: "end" }));
+  });
+  return out.join("");
+}
