@@ -68,16 +68,16 @@ Open `https://your-deployment.vercel.app/` to see the light and dark Cards side 
 | `private` | Token |
 |---|---|
 | `off` | A [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with **Public repositories (read-only)** access and no extra permissions. A classic token with no scopes works too. |
-| `owned`, `all` | Try a fine-grained token first: **All repositories**, with read-only **Contents** and **Metadata**. If your private Activity does not appear, use a [classic token](https://github.com/settings/tokens/new) with `repo` and `read:user` instead. |
+| `owned`, `all` | A [classic token](https://github.com/settings/tokens/new) with `repo` and `read:user`. Without `read:user`, GitHub reports private commits only as a total, not per repository, so they never reach the Card. A fine-grained token does not work here, even with **All repositories** and read-only **Contents**. |
 
 > **Warning:** the classic `repo` scope also grants *write* access to every repository you can
-> reach. The Card only ever reads, but a leaked token could do more. Prefer the fine-grained
-> token when it works, keep the token only in Vercel, and give it an expiry date.
+> reach. The Card only ever reads, but a leaked token could do more. Keep the token only in Vercel
+> and give it a short expiry date. If you do not need private Activity, stay on `off` with a
+> fine-grained token.
 
 With `private` set to `owned` or `all`, the token must belong to `username`. If it belongs to
 someone else, no private data is fetched and the Card explains why.
 
-<!-- Token types for owned/all are verified in issue #14; update this section with the result. -->
 
 ## URL parameters
 
