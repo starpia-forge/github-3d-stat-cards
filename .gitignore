@@ -1,2 +1,6 @@
 .scratch/
 .playwright-mcp/
+node_modules/
+.vercel/
+.env*
+prototypes/
