@@ -6,8 +6,8 @@ Milky Way Band that runs from your first commit (far left, receding into the dis
 are Nebulae, all coloured by the Languages they are written in.
 
 <a href="https://github.com/starpia-forge">
-  <img src="https://github-3d-stat-cards.vercel.app/api/milky-way?theme=light#gh-light-mode-only" alt="starpia-forge's Milky Way" width="100%">
-  <img src="https://github-3d-stat-cards.vercel.app/api/milky-way?theme=dark#gh-dark-mode-only" alt="starpia-forge's Milky Way" width="100%">
+  <img src="https://github-milkyway-stat-cards.vercel.app/api/milky-way?theme=light#gh-light-mode-only" alt="starpia-forge's Milky Way" width="100%">
+  <img src="https://github-milkyway-stat-cards.vercel.app/api/milky-way?theme=dark#gh-dark-mode-only" alt="starpia-forge's Milky Way" width="100%">
 </a>
 
 > **This deployment is personal.** The Card above is drawn for its Host, starpia-forge, and the
@@ -35,7 +35,7 @@ are Nebulae, all coloured by the Languages they are written in.
    Or use the button. It **copies** this repository into a new one under your account rather
    than forking it, so you will not receive later changes from upstream automatically.
 
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fstarpia-forge%2Fgithub-3d-stat-cards&env=GITHUB_TOKEN&envDescription=A%20GitHub%20token%20for%20reading%20your%20contributions&envLink=https%3A%2F%2Fgithub.com%2Fstarpia-forge%2Fgithub-3d-stat-cards%23tokens)
+   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fstarpia-forge%2Fgithub-milkyway-stat-cards&env=GITHUB_TOKEN&envDescription=A%20GitHub%20token%20for%20reading%20your%20contributions&envLink=https%3A%2F%2Fgithub.com%2Fstarpia-forge%2Fgithub-milkyway-stat-cards%23tokens)
 
 3. **Embed** it in your profile README (the repository named after your login). Replace
    `your-deployment` with your Vercel domain:

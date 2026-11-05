@@ -19,7 +19,7 @@ export function createGraphQL(token: string, fetchImpl: typeof fetch = fetch): G
   return async (query, variables = {}) => {
     const res = await fetchImpl("https://api.github.com/graphql", {
       method: "POST",
-      headers: { authorization: `bearer ${token}`, "content-type": "application/json", "user-agent": "github-3d-stat-cards" },
+      headers: { authorization: `bearer ${token}`, "content-type": "application/json", "user-agent": "github-milkyway-stat-cards" },
       body: JSON.stringify({ query, variables }),
     });
     if (res.status === 401) throw new GitHubError("GitHub rejected the token", "unauthorized");

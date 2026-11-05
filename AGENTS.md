@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues are tracked in GitHub Issues (starpia-forge/github-3d-stat-cards) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues (starpia-forge/github-milkyway-stat-cards) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
