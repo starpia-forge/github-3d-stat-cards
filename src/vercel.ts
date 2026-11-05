@@ -8,7 +8,7 @@ const TTL_SECONDS = 30 * 24 * 3600;
 
 /** Vercel Runtime Cache as the Store: needs no setup in a fork. */
 function runtimeStore(): Store {
-  const cache = getCache({ namespace: "github-3d-stat-cards" });
+  const cache = getCache({ namespace: "github-milkyway-stat-cards" });
   return {
     get: (key) => cache.get(key),
     set: (key, value) => cache.set(key, value, { ttl: TTL_SECONDS, name: "milky-way" }),

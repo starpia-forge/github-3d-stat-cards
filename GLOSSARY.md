@@ -1,4 +1,4 @@
-# GitHub 3D Stat Cards
+# GitHub Milky Way Stat Cards
 
 Embeddable images for GitHub profile READMEs that depict, in 3D, how a GitHub user has worked over time. Each person deploys their own copy to get their own Card.
 
